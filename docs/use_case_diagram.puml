@@ -1,0 +1,47 @@
+@startuml
+left to right direction
+
+actor "Credentials Schema Manager <<optional>>" as Manager
+actor "Credentials Issuer" as Issuer
+actor "Credentials Holder" as User
+actor "Credentials Verifier" as Verifier
+actor "Regulatory Authority <<optional>>" as Regulator
+
+rectangle "Programmable Money Transaction with Spending Conditions" {
+  (Define Credentials Formats) as Define
+  package "Credential Issuance Flow" {
+  (Request Credentials) as Request
+  (Attest & Issue Credentials) as AttestIssue
+}
+
+  package "Transaction Flow" {
+  (Initiate Transaction) as Initiate
+  (Generate Zero-Knowledge Proof) as GenerateProof
+  (Verify Credentials & ZKP) as Verify
+  (Approve or Reject Transaction) as Execute
+}
+
+
+
+
+  (Audit Process) as Audit
+}
+
+Manager --> Define
+Issuer --> Define
+Issuer --> AttestIssue
+User --> Request
+User --> Initiate
+Verifier --> Initiate
+User --> GenerateProof
+Verifier --> Verify
+Verifier --> Execute
+Regulator --> Audit
+
+' Include relationships showing workflow dependencies
+Request .> AttestIssue : <<include>>
+Initiate .> GenerateProof : <<include>>
+GenerateProof .> Verify : <<include>>
+Verify .> Execute : <<include>>
+
+@enduml
