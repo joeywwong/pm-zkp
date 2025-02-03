@@ -1,0 +1,29 @@
+@startuml
+start
+
+:Credential definition and creation;
+
+:User sends credential request;
+
+:Issuer performs identity attestation;
+if (Attestation successful?) then (yes)
+  :Issue verifiable credentials to user;
+else (no)
+  :Reject credential request;
+  stop
+endif
+
+:Transaction Initiation with spending conditions (e.g., age > 18);
+
+:User generates a zero-knowledge proof (ZKP) based on credentials;
+
+:Submit ZKP to the verifier;
+if (Proof valid and conditions satisfied?) then (yes)
+  :Approve transaction;
+else (no)
+  :Reject transaction;
+  stop
+endif
+
+stop
+@enduml
