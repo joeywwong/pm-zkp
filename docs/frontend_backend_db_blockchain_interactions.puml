@@ -1,0 +1,17 @@
+@startuml
+actor "User" as U
+participant "Frontend (React)" as FE
+participant "Backend (Node.js)\n(REST API)" as BE
+participant "Blockchain" as BC
+database "SQLite DB" as DB
+
+U -> FE: Click "operationName"
+FE -> BE: HTTP POST /api/operationName\n{parameters}
+BE -> BC: Construct & send transaction\n
+activate BE
+BC --> BE: Transaction Receipt\n{txHash, gasUsed, blockTimestamp}
+deactivate BE
+BE -> DB: INSERT log {operationName, txHash, \ntimestamp, runtime, gasFee}
+BE -> FE: HTTP Response\n{confirmation, tx details}
+FE -> U: Display confirmation and details
+@enduml
