@@ -3,11 +3,16 @@
 
 
 ## Getting started
-ERC1155 token airdrop conditioned with health data (template credentials created with Privado demo website, condition: restHeartRate < 90)
+ERC1155 token airdrop conditioned with health data (template credentials created with Privado demo website, 
+
+condition: restHeartRate < 90)
+
 To get the template credentials (health data, BMI=23, is_smoker=false, restHeartRate=70):
+
 https://wallet.privado.id#request_uri=https%3A%2F%2Fissuer-node-core-api-demo.privado.id%2Fv2%2Fqr-store%3Fid%3D22c6687f-5ea5-4f8a-bf0f-0490b957d775%26issuer%3Ddid%3Aiden3%3Apolygon%3Aamoy%3AxHtw7Gos8SoayvS2J5DUMm5Br2VbNzK2uWeMXinPw
 
 To submit a zero-knowledge proof of 'restHeartRate<90' to a universal verifier:
+
 https://wallet.privado.id/#request_uri=https://verifier-backend.privado.id/qr-store?id=b5974fc8-0242-46c3-80e9-fcaf6e6d5e7c
 
 If the ZKP does not satisify the condition, minting token is not possible and you get the error 'only identities with valid sig or mtp proof are allowed to receive tokens'.
