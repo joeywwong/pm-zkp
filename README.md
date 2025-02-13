@@ -3,9 +3,11 @@
 
 
 ## Getting started
-ERC1155 token airdrop conditioned with health data (template credentials created with Privado demo website, 
+ERC1155 token airdrop conditioned with health data 
 
-condition: restHeartRate < 90)
+(contract deployed on Polygon Amoy at 0x7ff4e59e4e71a1B1732c0CCc9756e97720C0A64c)
+
+(template credentials created with Privado demo website, condition: restHeartRate < 90)
 
 To get the template credentials (health data, BMI=23, is_smoker=false, restHeartRate=70):
 
