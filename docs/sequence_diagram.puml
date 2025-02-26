@@ -1,43 +1,48 @@
 @startuml
-participant "Optional: Credentials Schema Manager" as SchemaManager
+
+participant "Controller" as Controller
+participant "Programmable Money" as Money
+participant "Credentials Holder (Money sender and/or receiver)" as User
 participant "Credentials Issuer" as Issuer
-participant "Credentials Holder" as User
 participant "Credentials Verifier" as Verifier
+participant "Blockchain" as Blockchain
 
-' --- Credential Creation and Upload Phase ---
-alt Schema Manager handles credentials definition and publish
-    SchemaManager -> SchemaManager: Define and publish credential definitions
-else Issuer handles credentials definition and publish
-    Issuer -> Issuer: Define and publish credential definitions
-end
-
-note right of Issuer: Credential formats are pre-defined
-
-' --- Optional Credential Request and Issuance Phase ---
-opt Credential Request and Issuance (if not already requested)
-    User -> Issuer: Request Credentials
-    Issuer --> User: Request supporting documents
-    User --> Issuer: Provide identity and personal data
-    Issuer -> Issuer: Perform identity attestation
-    alt Attestation Outcome
-        Issuer --> User: Issue credentials
-    else
-        Issuer --> User: Reject credential request
+' --- Configure spending conditions of the money ---
+group #lightgreen Spending Conditions Configuration
+    Controller -> Money: specify spending condition (e.g., age > 18)
+    opt if related credentials not exist
+        Controller -> Issuer: define and publish credentials format
     end
 end
 
-' --- Transaction Initiation Phase ---
-User -> Verifier: Initiate Transaction
-Verifier --> User: Specify spending condition (e.g., age > 18) and request ZKP
-User -> User: Generate ZKP from credentials
-User --> Verifier: Submit ZKP
+group #lightsalmon Credentials Issuance
+    opt if related credentials are missing
+        ' --- Credential Request and Issuance Phase ---
+        User -> Issuer: request credentials
+        Issuer --> User: request supporting documents
+        User --> Issuer: provide identity and personal data
+        Issuer -> Issuer: perform identity attestation
+        alt attestation outcome
+            Issuer --> User: issue credentials
+        else
+            Issuer --> User: reject credential request
+        end
+    end
+end
 
-' --- Proof Verification and Decision ---
-Verifier -> Verifier: Validate credentials and verify ZKP
-alt Proof is Valid and Conditions Satisfied
-    Verifier --> User: Approve Transaction
-else
-    Verifier --> User: Reject Transaction
+' --- Transaction Phase ---
+group #lightblue Money Transaction
+    User -> User: generate ZKP from credentials
+    User -> Verifier: submit ZKP
+
+    ' --- Proof Verification and Decision ---
+    Verifier -> Verifier: validate credentials and verify ZKP
+    alt verification outcome
+        Verifier --> User: approve transaction
+    else
+        Verifier --> User: reject transaction
+    end
+    Verifier -> Blockchain: publish verification result
 end
 
 @enduml
