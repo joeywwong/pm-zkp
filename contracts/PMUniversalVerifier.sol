@@ -150,9 +150,11 @@ contract PMUniversalVerifier is ERC1155, Ownable {
       uint64[] memory tempRequestIDs = proofRequestIDs;
       for (uint256 i = 0; i < tempRequestIDs.length; i++) {
           // Retrieve the corresponding wallet address for this proof request ID
-          address prover = tokenID_proofRequest_address[tokenID][tempRequestIDs[i]];
-          if (!verifier.getProofStatus(prover, tempRequestIDs[i]).isVerified) {
+          if (tokenID_proofRequest_address[tokenID][tempRequestIDs[i]] != address(0)){
+            address prover = tokenID_proofRequest_address[tokenID][tempRequestIDs[i]];
+            if (!verifier.getProofStatus(prover, tempRequestIDs[i]).isVerified) {
             revert ProofNotVerified(tempRequestIDs[i], prover);
+          }
         }
       }
     }
