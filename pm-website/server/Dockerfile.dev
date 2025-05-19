@@ -1,0 +1,13 @@
+# server/Dockerfile.dev
+FROM node:18
+WORKDIR /app
+
+# Install all deps, including devDependencies (nodemon)
+COPY package*.json ./
+RUN npm install
+
+# Copy source
+COPY . .
+
+# Start in dev mode
+CMD ["npm", "run", "dev"]
