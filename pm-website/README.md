@@ -5,16 +5,20 @@
 - [x] Connect with MetaMask
 - [ ] Login with MetaMask (sign a nonce)
 - [x] Show all programmable money owned
-- [ ] Mint token
+- [x] Mint token
 - [x] Transfer programmable money
 - [x] Display spending conditions before token transfer
 - [x] Generate a link for proof verification if ZKP is not verified
 - [ ] Submit proof request to verifier contract
-  - [ ] Compute proof request payload using iden3’s repository and host the service in the backend
+  - [ ] Compute proof request payload using the script from iden3’s repository, the Go script inside and host the service in the backend
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
 - [ ] Remove spending conditions
 
-- [ ] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
+### GUI fix
+- [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
+- [ ] Update token balances after minting token
+- [ ] Reminder after transaction success
+
 - [ ] Record transaction gas fees in the database
 
 ## Getting started

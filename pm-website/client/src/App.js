@@ -1,41 +1,44 @@
-import './App.css';
 import React from 'react';
 import { useMetaMask } from './hooks/useMetaMask';
 import CallContract from './components/CallContract';
 import TokenList from './components/TokenList';
+import { useContract } from './hooks/useContract';
+
+// Material UI imports
+import { AppBar, Toolbar, Typography, Button, Container, Box, Paper } from '@mui/material';
 
 function App() {
   const { account, connect } = useMetaMask();
-  // If account is an object, get the address; otherwise use it directly
-  
+  const { staticContract } = useContract();
   const address_string = account && typeof account === 'object' ? account.address : account;
 
   return (
-    <div className="App">
-      <header className="App-header">
-        {/*
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload. Joe added this to test! Joe also edited this to test bind mount and hot reload
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        */}
-        {!account ? (
-          <button onClick={connect}>Connect MetaMask</button>
-        ) : (
-          <p>Connected account: {address_string}</p>
-        )}
+    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            PM Website
+          </Typography>
+          {!account ? (
+            <Button color="inherit" variant="outlined" onClick={connect}>
+              Connect MetaMask
+            </Button>
+          ) : (
+            <Typography variant="body1" sx={{ ml: 2 }}>
+              Connected: {address_string}
+            </Typography>
+          )}
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
           <TokenList />
+        </Paper>
+        <Paper elevation={2} sx={{ p: 3 }}>
           <CallContract />
-      </header>
-    </div>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 

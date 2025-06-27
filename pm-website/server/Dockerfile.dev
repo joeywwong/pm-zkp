@@ -2,12 +2,28 @@
 FROM node:18
 WORKDIR /app
 
-# Install all deps, including devDependencies (nodemon)
+# Install Go
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends golang-go \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files, install deps
 COPY package*.json ./
 RUN npm install
 
-# Copy source
-COPY . .
+# Ensure Go module context and build binary
+# Initialize module if missing and fetch dependencies
+# TODO: These lines don't work. I am running them manually in the container. It seems the folder paths a bit messed up, check them.
+#RUN cd iden3_repo/scripts/maintenance
+#RUN if [ ! -f go.mod ]; then go mod init schema-tool; fi
+#RUN go mod tidy
+#RUN cd ../../../
+#RUN mkdir -p iden3_repo/bin
+#RUN cd iden3_repo/scripts/maintenance
+#RUN go build -o ../../bin/schema-tool
 
-# Start in dev mode
+#this one seems unnecessary
+#RUN go build -o ./iden3_repo/bin/schema-tool ./iden3_repo/scripts/maintenance/main.go
+
+# Launch your Express server
 CMD ["npm", "run", "dev"]

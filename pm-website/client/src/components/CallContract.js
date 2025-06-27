@@ -3,6 +3,24 @@ import { useContract } from '../hooks/useContract';
 import { useMetaMask } from '../hooks/useMetaMask';
 import ReadJsonLD from './ReadJsonLD';
 import { ethers } from 'ethers';
+//import { prepareRequestParams } from '../iden3_repo/scripts/maintenance/prepareRequestParams';
+
+// Material UI imports
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  FormHelperText,
+  CircularProgress,
+  Paper,
+  Link,
+  Stack,
+} from '@mui/material';
 
 export default function CallContract() {
   const { staticContract, signerContract } = useContract();
@@ -30,7 +48,6 @@ export default function CallContract() {
     }
     try {
       const result = await staticContract.balanceOf(balanceAddress, balanceTokenId);
-      //const result = await staticContract.allTokenIDs();
       setBalance(result.toString());
     } catch (error) {
       console.error('Balance fetch failed:', error);
@@ -49,46 +66,46 @@ export default function CallContract() {
       return;
     }
     try {
-          // Fetch all proofRequestIDs array from contract
-          const proofIds = [];
-          let idx = 0;
-          while (true) {
-            try {
-              const id = await staticContract.proofRequestIDs(idx);
-              proofIds.push(id);
-              idx++;
-              console.log("request id: ", id);
-            } catch {
-              console.log("break!!!");
-              break;
-            }
-          }
-          // Retrieve addresses for each proof ID and filter out zero address
-          const provers = [];
-          for (const pid of proofIds) {
-            const addr = await staticContract.tokenID_proofRequest_address(transferTokenId, pid);
-            if (addr !== ethers.ZeroAddress) {
-              provers.push(addr);
-            }
-          }
-          console.log('Valid prover addresses:', provers);
-
-          console.log('contract runner:', signerContract.runner);
-          const tx = await signerContract.safeTransferFrom(
-            account,
-            recipient,
-            transferTokenId,
-            amount,
-            '0x'
-          );
-          console.log('Transfer tx hash:', tx.hash);
-          await tx.wait();
-          console.log('Transfer confirmed');
-        } catch (err) {
-          const reason = err.reason || err.errorArgs?.[1] || err.message;
-          setError(`Transfer failed: ${reason}`);
+      // Fetch all proofRequestIDs array from contract
+      const proofIds = [];
+      let idx = 0;
+      while (true) {
+        try {
+          const id = await staticContract.proofRequestIDs(idx);
+          proofIds.push(id);
+          idx++;
+          console.log("request id: ", id);
+        } catch {
+          console.log("break!!!");
+          break;
         }
-      };
+      }
+      // Retrieve addresses for each proof ID and filter out zero address
+      const provers = [];
+      for (const pid of proofIds) {
+        const addr = await staticContract.tokenID_proofRequest_address(transferTokenId, pid);
+        if (addr !== ethers.ZeroAddress) {
+          provers.push(addr);
+        }
+      }
+      console.log('Valid prover addresses:', provers);
+
+      console.log('contract runner:', signerContract.runner);
+      const tx = await signerContract.safeTransferFrom(
+        account,
+        recipient,
+        transferTokenId,
+        amount,
+        '0x'
+      );
+      console.log('Transfer tx hash:', tx.hash);
+      await tx.wait();
+      console.log('Transfer confirmed');
+    } catch (err) {
+      const reason = err.reason || err.errorArgs?.[1] || err.message;
+      setError(`Transfer failed: ${reason}`);
+    }
+  };
 
   // Proof request inputs
   const [tokenID_addRequest, set_tokenID_addRequest] = useState('');
@@ -177,212 +194,430 @@ export default function CallContract() {
     setError(err);
   };
 
-  return (
-    <div>
-      <h3>Check ERC-1155 Balance</h3>
-      <input
-        type="text"
-        placeholder="Wallet Address"
-        value={balanceAddress}
-        onChange={e => setBalanceAddress(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Token ID"
-        value={balanceTokenId}
-        onChange={e => setBalanceTokenId(e.target.value)}
-      />
-      <button onClick={fetchBalance}>Get Balance</button>
-      {balance !== null && <p>Balance: {balance}</p>}
+  // Minting state
+  const [mintRecipient, setMintRecipient] = useState('');
+  const [mintTokenId, setMintTokenId] = useState('');
+  const [mintTokenName, setMintTokenName] = useState('');
+  const [mintAmount, setMintAmount] = useState('');
+  const [isMinting, setIsMinting] = useState(false);
 
+  const mintToken = async () => {
+    if (!signerContract || !account) {
+      alert('Connect wallet and load contract first');
+      return;
+    }
+    setIsMinting(true);
+    try {
+      const tx = await signerContract.mintNewToken(
+        mintRecipient,
+        mintTokenId,
+        mintAmount,
+        "0x",
+        mintTokenName
+      );
+      await tx.wait();
+      alert('Token minted!');
+    } catch (err) {
+      alert('Mint failed: ' + (err.reason || err.message));
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
+  // Mint Existing Token state
+  const [mintExistRecipient, setMintExistRecipient] = useState('');
+  const [mintExistTokenId, setMintExistTokenId] = useState('');
+  const [mintExistAmount, setMintExistAmount] = useState('');
+  const [isMintingExisting, setIsMintingExisting] = useState(false);
+
+  // Mint Existing Token handler
+  const mintExistingToken = async () => {
+    if (!signerContract || !account) {
+      alert('Connect wallet and load contract first');
+      return;
+    }
+    setIsMintingExisting(true);
+    try {
+      const tx = await signerContract.mintExistingToken(
+        mintExistRecipient,
+        mintExistTokenId,
+        mintExistAmount,
+        "0x"
+      );
+      await tx.wait();
+      alert('Existing token minted!');
+    } catch (err) {
+      alert('Mint failed: ' + (err.reason || err.message));
+    } finally {
+      setIsMintingExisting(false);
+    }
+  };
+
+  return (
+    <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
+      {/* Mint New Token Section */}
+      <Typography variant="h5" gutterBottom>
+        Mint New Token
+      </Typography>
+      <Stack direction="row" spacing={2} mt={2}>
+        <TextField
+          label="Recipient Address"
+          value={mintRecipient}
+          onChange={e => setMintRecipient(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Token ID"
+          value={mintTokenId}
+          onChange={e => setMintTokenId(e.target.value)}
+          size="small"
+          fullWidth
+        />
+      </Stack>
+      <Stack direction="row" spacing={2} mt={2}>
+        <TextField
+          label="Token Name"
+          value={mintTokenName}
+          onChange={e => setMintTokenName(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Amount"
+          type="number"
+          value={mintAmount}
+          onChange={e => setMintAmount(e.target.value)}
+          size="small"
+          fullWidth
+        />
+      </Stack>
+      <Box mt={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={mintToken}
+          disabled={isMinting || !mintRecipient || !mintTokenId || !mintTokenName || !mintAmount}
+          startIcon={isMinting && <CircularProgress size={18} />}
+        >
+          {isMinting ? 'Minting…' : 'Mint Token'}
+        </Button>
+      </Box>
+
+      {/* Mint Existing Token Section */}
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+        Mint Existing Token
+      </Typography>
+      <Stack direction="row" spacing={2} mt={2}>
+        <TextField
+          label="Recipient Address"
+          value={mintExistRecipient}
+          onChange={e => setMintExistRecipient(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Token ID"
+          value={mintExistTokenId}
+          onChange={e => setMintExistTokenId(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Amount"
+          type="number"
+          value={mintExistAmount}
+          onChange={e => setMintExistAmount(e.target.value)}
+          size="small"
+          fullWidth
+        />
+      </Stack>
+      <Box mt={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={mintExistingToken}
+          disabled={isMintingExisting || !mintExistRecipient || !mintExistTokenId || !mintExistAmount}
+          startIcon={isMintingExisting && <CircularProgress size={18} />}
+        >
+          {isMintingExisting ? 'Minting…' : 'Mint Existing Token'}
+        </Button>
+      </Box>
+
+      {/* Check ERC-1155 Balance Section */}
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+        Check ERC-1155 Balance
+      </Typography>
+      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+        <TextField
+          label="Wallet Address"
+          value={balanceAddress}
+          onChange={e => setBalanceAddress(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Token ID"
+          value={balanceTokenId}
+          onChange={e => setBalanceTokenId(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <Button variant="contained" onClick={fetchBalance}>
+          Get Balance
+        </Button>
+      </Stack>
+      {balance !== null && (
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Balance: <b>{balance}</b>
+        </Typography>
+      )}
+
+      {/* Uncomment to enable transfer UI */}
       {/*
-      <h3>Transfer ERC-1155 Token</h3>
-      <input
-        type="text"
-        placeholder="Recipient Address"
-        value={recipient}
-        onChange={e => setRecipient(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Token ID"
-        value={transferTokenId}
-        onChange={e => setTransferTokenId(e.target.value)}
-      />
-      <input
-        type="number"
-        placeholder="Amount"
-        value={amount}
-        onChange={e => setAmount(e.target.value)}
-      />
-      <button onClick={transferToken}>Transfer Token</button>
-      {error && <p className="text-red-500">{error}</p>}
+      <Typography variant="h5" gutterBottom>
+        Transfer ERC-1155 Token
+      </Typography>
+      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+        <TextField
+          label="Recipient Address"
+          value={recipient}
+          onChange={e => setRecipient(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Token ID"
+          value={transferTokenId}
+          onChange={e => setTransferTokenId(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Amount"
+          type="number"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <Button variant="contained" onClick={transferToken}>
+          Transfer Token
+        </Button>
+      </Stack>
+      {error && (
+        <Typography color="error" variant="body2">{error}</Typography>
+      )}
       */}
 
-      <h3>Set Proof Request</h3>
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+        Set Proof Request on Verifier Contract (UniversalVerifier.sol)
+      </Typography>
 
       {/* JSON-LD Loader */}
-      <ReadJsonLD onData={data => {
-        setJsonLD(data);
-        const ctx = (data['@context'] && data['@context'][0]) || {};
-        const names = Object.entries(ctx)
-          .filter(([key, val]) => typeof val === 'object')
-          .map(([key]) => key);
-        setCredentialNames(names);
-      }} />
+      <Box mb={2}>
+        <ReadJsonLD onData={data => {
+          setJsonLD(data);
+          const ctx = (data['@context'] && data['@context'][0]) || {};
+          const names = Object.entries(ctx)
+            .filter(([key, val]) => typeof val === 'object')
+            .map(([key]) => key);
+          setCredentialNames(names);
+        }} />
+      </Box>
 
-      {/* Display extracted schema types as a dropdown */}
-      <div className="mb-4">
-        <label htmlFor="schemaType" className="block font-medium mb-1">Schema Type</label>
-        <select
+      {/* Schema Type Dropdown */}
+      <FormControl fullWidth margin="normal" disabled={credentialNames.length === 0}>
+        <InputLabel id="schemaType-label">Schema Type</InputLabel>
+        <Select
+          labelId="schemaType-label"
           id="schemaType"
           value={selectedSchema}
+          label="Schema Type"
           onChange={e => setSelectedSchema(e.target.value)}
-          className="w-full p-2 border rounded"
-          disabled={credentialNames.length === 0}
         >
-          <option value="" hidden>Select a schema</option>
+          <MenuItem value="" disabled>
+            Select a schema
+          </MenuItem>
           {credentialNames.map(schema => (
-            <option key={schema} value={schema}>{schema}</option>
+            <MenuItem key={schema} value={schema}>{schema}</MenuItem>
           ))}
-        </select>
-      </div>
-      
-      {/* Attribute dropdown, populated based on selected schema */}
-      <div className="mb-4">
-        <label htmlFor="attributeType" className="block font-medium mb-1">Attribute</label>
-        <select
+        </Select>
+      </FormControl>
+
+      {/* Attribute Dropdown */}
+      <FormControl fullWidth margin="normal" disabled={!selectedSchema || attributeNames.length === 0}>
+        <InputLabel id="attributeType-label">Attribute</InputLabel>
+        <Select
+          labelId="attributeType-label"
           id="attributeType"
           value={selectedAttribute}
+          label="Attribute"
           onChange={e => setSelectedAttribute(e.target.value)}
-          className="w-full p-2 border rounded"
-          disabled={!selectedSchema || attributeNames.length === 0}
         >
-          <option value="" hidden>Select an attribute</option>
+          <MenuItem value="" disabled>
+            Select an attribute
+          </MenuItem>
           {attributeNames.map(attr => (
-            <option key={attr} value={attr}>{attr}</option>
+            <MenuItem key={attr} value={attr}>{attr}</MenuItem>
           ))}
-        </select>
-      </div>
-      
-      {/* Operator dropdown, enabled after attribute selected and adjusted by type */}
-      <div className="mb-4">
-        <label htmlFor="operator" className="block font-medium mb-1">Operator</label>
-      <select
-        id="operator"
-        value={selectedOperator}
-        onChange={e => setSelectedOperator(e.target.value)}
-        className="w-full p-2 border rounded mb-4"
-        disabled={!selectedAttribute}
-      >
-        <option value="" disabled>Select an operator</option>
-        {(() => {
-          let ops = [];
-          if (attributeType === 'boolean') {
-            ops = [
-              { value: '$eq', label: 'Is equal to ($eq)' },
-              { value: '$ne', label: 'Is not equal to ($ne)' }
-            ];
-          } else if (attributeType === 'integer') {
-            ops = [
-              { value: '$eq', label: 'Is equal to ($eq)' },
-              { value: '$ne', label: 'Is not equal to ($ne)' },
-              { value: '$in', label: 'Matches one of the values ($in)' },
-              { value: '$nin', label: 'Matches none of the values ($nin)' },
-              { value: '$lt', label: 'Is less than ($lt)' },
-              { value: '$gt', label: 'Is greater than ($gt)' }
-            ];
-          } else if (attributeType === 'string' || attributeType === 'double') {
-            ops = [
-              { value: '$eq', label: 'Is equal to ($eq)' },
-              { value: '$ne', label: 'Is not equal to ($ne)' },
-              { value: '$in', label: 'Matches one of the values ($in)' },
-              { value: '$nin', label: 'Matches none of the values ($nin)' }
-            ];
-          }
-          return ops.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ));
-        })()}
-      </select>
-      </div>
-      
+        </Select>
+      </FormControl>
+
+      {/* Operator Dropdown */}
+      <FormControl fullWidth margin="normal" disabled={!selectedAttribute}>
+        <InputLabel id="operator-label">Operator</InputLabel>
+        <Select
+          labelId="operator-label"
+          id="operator"
+          value={selectedOperator}
+          label="Operator"
+          onChange={e => setSelectedOperator(e.target.value)}
+        >
+          <MenuItem value="" disabled>
+            Select an operator
+          </MenuItem>
+          {(() => {
+            let ops = [];
+            if (attributeType === 'boolean') {
+              ops = [
+                { value: '$eq', label: 'Is equal to ($eq)' },
+                { value: '$ne', label: 'Is not equal to ($ne)' }
+              ];
+            } else if (attributeType === 'integer') {
+              ops = [
+                { value: '$eq', label: 'Is equal to ($eq)' },
+                { value: '$ne', label: 'Is not equal to ($ne)' },
+                { value: '$in', label: 'Matches one of the values ($in)' },
+                { value: '$nin', label: 'Matches none of the values ($nin)' },
+                { value: '$lt', label: 'Is less than ($lt)' },
+                { value: '$gt', label: 'Is greater than ($gt)' }
+              ];
+            } else if (attributeType === 'string' || attributeType === 'double') {
+              ops = [
+                { value: '$eq', label: 'Is equal to ($eq)' },
+                { value: '$ne', label: 'Is not equal to ($ne)' },
+                { value: '$in', label: 'Matches one of the values ($in)' },
+                { value: '$nin', label: 'Matches none of the values ($nin)' }
+              ];
+            }
+            return ops.map(opt => (
+              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+            ));
+          })()}
+        </Select>
+      </FormControl>
+
       {/* Value Input with onBlur validation and inline error */}
       {selectedOperator && (
-        <div className="mb-4">
-          <label className="block font-medium mb-1">Value</label>
-          <div className="flex items-center space-x-3">
-            {attributeType === 'boolean' ? (
-              <select
+        <FormControl fullWidth margin="normal" error={!!error}>
+          {attributeType === 'boolean' ? (
+            <>
+              <InputLabel id="boolean-value-label">Value</InputLabel>
+              <Select
+                labelId="boolean-value-label"
                 value={filterValue}
+                label="Value"
                 onChange={e => setFilterValue(e.target.value)}
                 onBlur={e => validateValue(e.target.value)}
-                className="p-2 border rounded"
               >
-                <option value="" hidden>Select true or false</option>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </select>
-            ) : (
-              <input
+                <MenuItem value="" disabled>
+                  Select true or false
+                </MenuItem>
+                <MenuItem value="true">True</MenuItem>
+                <MenuItem value="false">False</MenuItem>
+              </Select>
+              {error && <FormHelperText>{error}</FormHelperText>}
+            </>
+          ) : (
+            <>
+              <TextField
+                label={`Value (${attributeType})`}
                 type={attributeType === 'string' ? 'text' : 'number'}
                 step={attributeType === 'double' ? 'any' : '1'}
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
                 onBlur={e => validateValue(e.target.value)}
-                className="p-2 border rounded"
-                placeholder={`Enter a ${attributeType} value`}
+                error={!!error}
+                helperText={error}
               />
-            )}
-            {error && <span className="text-red-600 whitespace-nowrap">{error}</span>}
-          </div>
-        </div>
+            </>
+          )}
+        </FormControl>
       )}
 
-      <input
-        type="text"
-        placeholder="TokenID"
-        value={tokenID_addRequest}
-        onChange={e => set_tokenID_addRequest(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Proof Request ID"
-        value={requestID}
-        onChange={e => set_requestID(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Prover's address"
-        value={proverAddress}
-        onChange={e => set_proverAddress(e.target.value)}
-      />
+      {/* Set Proof Request Button */}
+      <Box mt={2}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => {
+            // TODO: implement set proof request logic here
+            alert('Set Proof Request clicked!');
+          }}
+          disabled={!selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !!error}
+        >
+          Set Proof Request
+        </Button>
+      </Box>
 
-      <button
-        onClick={addProofRequest}
-        disabled={isSubmitting}
-        className={`mt-2 px-4 py-2 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'bg-blue-600 text-white'}`}
-      >
-        {isSubmitting ? 'Submitting…' : 'Add Proof Request'}
-      </button>
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+        Set Proof Request on PM Contract
+      </Typography>
+
+      <Stack direction="row" spacing={2} mt={2}>
+        <TextField
+          label="TokenID"
+          value={tokenID_addRequest}
+          onChange={e => set_tokenID_addRequest(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Proof Request ID"
+          value={requestID}
+          onChange={e => set_requestID(e.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          label="Prover's address"
+          value={proverAddress}
+          onChange={e => set_proverAddress(e.target.value)}
+          size="small"
+          fullWidth
+        />
+      </Stack>
+
+      <Box mt={2}>
+        <Button
+          variant="contained"
+          onClick={addProofRequest}
+          disabled={isSubmitting}
+          startIcon={isSubmitting && <CircularProgress size={18} />}
+        >
+          {isSubmitting ? 'Submitting…' : 'Add Proof Request'}
+        </Button>
+      </Box>
 
       {txHash && (
-        <div className="mt-3 p-2 border rounded bg-gray-50">
-          <p>
+        <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#f9f9f9' }}>
+          <Typography variant="body2">
             <strong>Tx Hash:</strong>{' '}
-            <a
+            <Link
               href={`https://amoy.polygonscan.com/tx/${txHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline"
+              underline="hover"
             >
               {txHash}
-            </a>
-          </p>
-          <p><strong>Status:</strong> {txStatus}</p>
-        </div>
+            </Link>
+          </Typography>
+          <Typography variant="body2">
+            <strong>Status:</strong> {txStatus}
+          </Typography>
+        </Paper>
       )}
-
-    </div>
+    </Paper>
   );
 }
