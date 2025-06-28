@@ -32,6 +32,7 @@ export default function TokenList() {
   const [proofStatuses, setProofStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [transferring, setTransferring] = useState({});
+  const [tokenNames, setTokenNames] = useState({});
 
   useEffect(() => {
     if (!staticContract || !account) return;
@@ -49,6 +50,13 @@ export default function TokenList() {
         const accountsArray = idsBigArray.map(() => account);
         const balancesBig = await staticContract.balanceOfBatch(accountsArray, idsBigArray);
         setBalances(balancesBig.map(b => b.toString()));
+
+        // 3. Fetch token names in batch
+        const names = {};
+        for (const id of ids) {
+          names[id] = await staticContract.tokenName(id);
+        }
+        setTokenNames(names);
       } catch (err) {
         console.error('TokenList load error:', err);
       } finally {
@@ -158,6 +166,9 @@ export default function TokenList() {
             <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="h6" gutterBottom>
+                  {tokenNames[id] || 'Unnamed Token'}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
                   Token #{id}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 2 }}>

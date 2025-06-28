@@ -21,7 +21,7 @@
 - [ ] Update token balances after minting token
 - [ ] Reminder after transaction success
 - [ ] Show spending conditions above transfer button, e.g. birthday before 20250101
-- [ ] Show token names over ID
+- [x] Show token names over ID
 - [ ] Generate unique token id automatically
 
 ### Evaluation
