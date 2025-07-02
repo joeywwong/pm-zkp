@@ -1,0 +1,8 @@
+**/lib/VerifierMTP.sol
+**/lib/VerifierSig.sol
+**/lib/VerifierV3.sol
+**/lib/VerifierStateTransition.sol
+**/lib/groth16-verifiers/Groth16VerifierMTP.sol
+**/lib/groth16-verifiers/Groth16VerifierSig.sol
+**/lib/groth16-verifiers/Groth16VerifierV3.sol
+**/lib/groth16-verifiers/Groth16VerifierStateTransition.sol

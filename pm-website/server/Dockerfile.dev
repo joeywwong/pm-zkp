@@ -9,7 +9,12 @@ RUN apt-get update \
 
 # Copy package files, install deps
 COPY package*.json ./
-RUN npm install
+COPY /iden3_repo ./iden3_repo
+
+RUN npm install \
+ && cd iden3_repo \
+ && npm install \
+ && npx hardhat compile
 
 # Ensure Go module context and build binary
 # Initialize module if missing and fetch dependencies
@@ -24,6 +29,8 @@ RUN npm install
 
 #this one seems unnecessary
 #RUN go build -o ./iden3_repo/bin/schema-tool ./iden3_repo/scripts/maintenance/main.go
+
+COPY . .
 
 # Launch your Express server
 CMD ["npm", "run", "dev"]

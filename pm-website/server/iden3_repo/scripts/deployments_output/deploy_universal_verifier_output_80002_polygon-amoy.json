@@ -1,0 +1,9 @@
+{
+ "proxyAdminOwnerAddress": "0xAe15d2023A76174a940cbb2b7F44012C728B9d74",
+ "universalVerifier": "0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c",
+ "verifierLib": "0x2FAa40562E135B1643BD204bA30a260477DDDefF",
+ "state": "0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124",
+ "network": "polygon-amoy",
+ "chainId": 80002,
+ "deployStrategy": "create2"
+}

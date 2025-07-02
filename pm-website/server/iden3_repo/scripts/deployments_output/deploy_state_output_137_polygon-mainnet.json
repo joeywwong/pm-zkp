@@ -1,0 +1,10 @@
+{
+ "proxyAdminOwnerAddress": "0xAe15d2023A76174a940cbb2b7F44012C728B9d74",
+ "state": "0x3C9acB2205Aa72A05F6D77d708b5Cf85FCa3a896",
+ "stateLib": "0x946d3D28f19702904CAb34c1391AEd9609D86C57",
+ "stateCrossChainLib": "0xE2fEc1e232fd7D12404080824dccE800056FDD9b",
+ "crossChainProofValidator": "0x71e7c0835737d8AB3BEc5a04d9a0be6D0a48622e",
+ "network": "polygon-mainnet",
+ "chainId": 137,
+ "deployStrategy": "create2"
+}
