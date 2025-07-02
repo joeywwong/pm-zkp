@@ -1,26 +1,41 @@
 # PM-ZKP
 
-
-
+# PM-website
+See below instruction before running the website.
 ## Getting started
-ERC1155 token airdrop conditioned with health data 
 
-(contract deployed on Polygon Amoy at 0x7ff4e59e4e71a1B1732c0CCc9756e97720C0A64c)
+These instructions will get the development environment up and running on your local machine.
 
-(template credentials created with Privado demo website, condition: restHeartRate < 90)
+### Prerequisites
 
-To get the template credentials (health data, BMI=23, is_smoker=false, restHeartRate=70):
+- **Node.js**
+- **npm**
+- **Docker** & **Docker Compose**
 
-https://wallet.privado.id#request_uri=https%3A%2F%2Fissuer-node-core-api-demo.privado.id%2Fv2%2Fqr-store%3Fid%3D22c6687f-5ea5-4f8a-bf0f-0490b957d775%26issuer%3Ddid%3Aiden3%3Apolygon%3Aamoy%3AxHtw7Gos8SoayvS2J5DUMm5Br2VbNzK2uWeMXinPw
+### Setup Steps
+1. **Build and start all services**  
+   This single command will:
+   - Install dependencies for the **frontend**, **backend**, and **iden3_repo**
+   - Compile your Hardhat contracts in iden3_repo
+   - Launch both client (port 3000) and server (port 5000)  
+   ```bash
+   docker-compose -f docker-compose.dev.yml up --build
 
-To submit a zero-knowledge proof of 'restHeartRate<90' to a universal verifier:
+## TODO
 
-https://wallet.privado.id/#request_uri=https://verifier-backend.privado.id/qr-store?id=b5974fc8-0242-46c3-80e9-fcaf6e6d5e7c
-
-If the ZKP does not satisify the condition, minting token is not possible and you get the error 'only identities with valid sig or mtp proof are allowed to receive tokens'.
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- [x] Connect with MetaMask
+- [ ] Login with MetaMask (sign a nonce)
+- [x] Show all programmable money owned
+- [x] Mint token
+- [x] Transfer programmable money
+- [x] Display spending conditions before token transfer
+- [x] Generate a link for proof verification if ZKP is not verified
+- [ ] Submit proof request to verifier contract
+  - [ ] Frontend calls POST (with credentials schema, attribute and value, e.g. birthday > 19900101) to ask backend to compute proof request payload 
+  - [x] Compute proof request payload using the script from iden3’s repository and the Go script inside, and host the service on the backend
+  - [ ] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
+- [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
+- [ ] Remove spending conditions
 
 ## Add your files
 
