@@ -21,7 +21,16 @@ export function getAuthV2RequestId(): number {
 //TODO: compute random requestId
 //TODO: check if requestID already exists, if yes, compute another one
 //TODO: add context to parameters. Context is the URL to the json-LD schema, e.g. "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
-export async function main(type: string, attribute: string, schemaOrRaw: string, operatorStr: string, valueParam: number, tokenID: number, contextParam: string) {
+export async function main(
+  type: string,
+  attribute: string,
+  schemaOrRaw: string,
+  operatorStr: string,
+  valueParam: any,
+  tokenID: number,
+  contextParam: string,
+  attributeType: string // <-- add this
+) {
   try {
     // Log incoming parameters
     //console.log('Arg #1 (type):', type);
@@ -131,6 +140,46 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
         throw new Error(`Unsupported operator: ${operatorStr}`);
     }
 
+    // Coerce valueParam to the correct type based on attributeType
+    let coercedValue: any;
+    switch (attributeType) {
+      case "number":
+      case "int":
+      case "integer":
+        coercedValue = Number(valueParam);
+        if (isNaN(coercedValue)) {
+          throw new Error(`Invalid number for valueParam: ${valueParam}`);
+        }
+        break;
+      case "bigint":
+        try {
+          coercedValue = BigInt(valueParam);
+        } catch (e) {
+          throw new Error(`Invalid bigint for valueParam: ${valueParam}`);
+        }
+        break;
+      case "boolean":
+        if (typeof valueParam === "boolean") {
+          coercedValue = valueParam;
+        } else if (typeof valueParam === "string") {
+          if (valueParam.toLowerCase() === "true") coercedValue = true;
+          else if (valueParam.toLowerCase() === "false") coercedValue = false;
+          else throw new Error(`Invalid boolean for valueParam: ${valueParam}`);
+        } else {
+          coercedValue = Boolean(valueParam);
+        }
+        break;
+      case "string":
+        coercedValue = String(valueParam);
+        break;
+      default:
+        throw new Error(`Unsupported attributeType: ${attributeType}`);
+    }
+
+    // Log for debugging
+    //console.log(`[DEBUG] attributeType: ${attributeType}, coercedValue:`, coercedValue, `typeof: ${typeof coercedValue}`);
+
+    // Use coercedValue in all places where valueParam was used
     let query: any = {
       requestId: requestId,
       schema: schemaBigInt,
@@ -138,7 +187,7 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
       operator, // set from the switch above
       slotIndex: 0,
       queryHash: "",
-      value: [valueParam, ...new Array(63).fill(0)], // for operators 1-3 only first value matters
+      value: [coercedValue, ...new Array(63).fill(0)], // for operators 1-3 only first value matters
       circuitIds: [circuitName],
       skipClaimRevocationCheck: false,
       claimPathNotExists: 0,
@@ -231,7 +280,7 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
               context: contextParam,
               credentialSubject: {
                 [attribute]: {
-                  [operatorStr]: valueParam,
+                  [operatorStr]: coercedValue,
                 },
               },
               type: "KYCAgeCredential",
@@ -276,10 +325,10 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
       else {
         //console.log("This is NOT the correct schemaClaimPathKey");
       }
-    console.log("requestId: ", requestId);
-    console.log(JSON.stringify(invokeRequestMetadataKYCAgeCredential, null, "\t"));
-    console.log("validator: ", validatorAddress);
-    console.log("data: ", data);
+    //console.log("requestId: ", requestId);
+    //console.log("metadata: "JSON.stringify(invokeRequestMetadataKYCAgeCredential, null, "\t"));
+    //console.log("validator: ", validatorAddress);
+    //console.log("data: ", data);
     
     const payload = {
       requestId,
@@ -288,6 +337,12 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
       data
     };
 
+    console.log(JSON.stringify({
+      requestId,
+      metadata: JSON.stringify(invokeRequestMetadataKYCAgeCredential),
+      validator: validatorAddress,
+      data
+    }));
     //console.log(JSON.stringify(payload));
     //console.log(`Request ID: ${requestId} is set in tx: ${tx.hash}`);
   }
@@ -300,14 +355,14 @@ export async function main(type: string, attribute: string, schemaOrRaw: string,
   }
 }
 
-const [, , , , , type, attribute, schema, operatorStr, valueParam, tokenID, contextParam] = process.argv;
+const [, , , , , type, attribute, schema, operatorStr, valueParam, tokenID, contextParam, attributeType] = process.argv;
 
-if (!type || !attribute || !schema || !operatorStr || !valueParam || !tokenID || !contextParam) {
-  console.error("Usage: npx hardhat testRequest_with_go <type> <attribute> <schemaJson> <operatorStr> <valueParam> <tokenID> <contextParam>");
+if (!type || !attribute || !schema || !operatorStr || valueParam === undefined || !tokenID || !contextParam || !attributeType) {
+  console.error("Usage: npx hardhat testRequest_with_go <type> <attribute> <schemaJson> <operatorStr> <valueParam> <tokenID> <contextParam> <attributeType>");
   process.exit(1);
 }
 
-main(type, attribute, schema, operatorStr, Number(valueParam), Number(tokenID), contextParam)
+main(type, attribute, schema, operatorStr, valueParam, Number(tokenID), contextParam, attributeType)
   .then(() => process.exit(0))
   .catch((error) => {
     console.log(error);

@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 
 export default function CallContract() {
-  const { staticContract, signerContract } = useContract();
+  const { staticContract, signerContract, signerVerifierContract } = useContract();
   const { account } = useMetaMask();
 
   // proof request setup (json-LD) related
@@ -257,13 +257,33 @@ export default function CallContract() {
   const [jsonLdUrl, setJsonLdUrl] = useState('');
   const [requestResult, setRequestResult] = useState('');
 
+  // Add these states near the other tx feedback states
+  const [verifierTxHash, setVerifierTxHash] = useState('');
+  const [verifierTxStatus, setVerifierTxStatus] = useState('');
+  const [verifierTxError, setVerifierTxError] = useState('');
+
   const handleSetProofRequest = async () => {
-    console.log({ jsonLD, selectedSchema, selectedAttribute, selectedOperator, filterValue, jsonLdUrl });
+    setVerifierTxHash('');
+    setVerifierTxStatus('');
+    setVerifierTxError('');
+    setRequestResult('');
+
+    // Log the React state variable attributeType
+    console.log('[React state] attributeType:', attributeType);
+
+    // Prepare valueParam for POST
+    const valueParam =
+      attributeType === 'integer' || attributeType === 'double'
+        ? Number(filterValue)
+        : filterValue;
+
+    // Log the actual JS type of valueParam
+    console.log('[JS typeof] valueParam:', valueParam, 'type:', typeof valueParam);
+
     if (!jsonLD || !selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !jsonLdUrl) {
       alert('Please fill in all required fields.');
       return;
     }
-
     try {
       const response = await fetch('http://localhost:5000/api/requestPayload', {
         method: 'POST',
@@ -273,19 +293,57 @@ export default function CallContract() {
           attribute: selectedAttribute,
           schema: jsonLD,
           operatorStr: selectedOperator,
-          valueParam: attributeType === 'integer' || attributeType === 'double'
-            ? Number(filterValue)
-            : filterValue,
-          tokenID: 99999, // Use 99999 as a placeholder
-          contextParam: jsonLdUrl
+          valueParam,
+          tokenID: 99999,
+          contextParam: jsonLdUrl,
+          attributeType
         })
       });
       const data = await response.json();
+
       // Show requestId if present, otherwise show the whole response
       if (data.requestId) {
         setRequestResult(`Request ID: ${data.requestId}`);
       } else {
         setRequestResult(`Response: ${JSON.stringify(data)}`);
+      }
+
+      // Now call the verifier contract's setZKPRequest
+      if (
+        signerVerifierContract &&
+        data.requestId &&
+        data.metadata &&
+        data.validator &&
+        data.data
+      ) {
+        setVerifierTxStatus('Submitting...');
+        // Convert types as needed
+        const requestIdBN = BigInt(data.requestId); // uint64
+        const metadata = data.metadata;
+        const validator = data.validator;
+        const bytesData = data.data; // should be 0x... hex string
+
+        try {
+          const tx = await signerVerifierContract.setZKPRequest(
+            requestIdBN,
+            {
+              metadata,
+              validator,
+              data: bytesData
+            }
+          );
+          setVerifierTxHash(tx.hash);
+          setVerifierTxStatus('Pending...');
+          const receipt = await tx.wait();
+          if (receipt.status === 1) {
+            setVerifierTxStatus('Confirmed');
+          } else {
+            setVerifierTxStatus('Failed');
+          }
+        } catch (err) {
+          setVerifierTxError(err.reason || err.message);
+          setVerifierTxStatus('Error');
+        }
       }
     } catch (err) {
       setRequestResult('Failed to send proof request: ' + err.message);
@@ -665,6 +723,35 @@ export default function CallContract() {
           <Typography variant="body2">
             <strong>Status:</strong> {txStatus}
           </Typography>
+        </Paper>
+      )}
+
+      {/* Verifier Transaction Result Display */}
+      {(verifierTxHash || verifierTxStatus || verifierTxError) && (
+        <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#fffde7' }}>
+          {verifierTxHash && (
+            <Typography variant="body2">
+              <strong>Verifier Tx Hash:</strong>{' '}
+              <Link
+                href={`https://amoy.polygonscan.com/tx/${verifierTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+              >
+                {verifierTxHash}
+              </Link>
+            </Typography>
+          )}
+          {verifierTxStatus && (
+            <Typography variant="body2">
+              <strong>Status:</strong> {verifierTxStatus}
+            </Typography>
+          )}
+          {verifierTxError && (
+            <Typography color="error" variant="body2">
+              <strong>Error:</strong> {verifierTxError}
+            </Typography>
+          )}
         </Paper>
       )}
 

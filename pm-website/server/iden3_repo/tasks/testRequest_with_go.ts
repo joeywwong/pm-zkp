@@ -10,6 +10,7 @@ task("testRequest_with_go", "Runs the Go‐powered testRequest")
   .addPositionalParam("valueParam", "Value parameter")
   .addPositionalParam("tokenID", "Token ID")
   .addPositionalParam("contextParam", "Context parameter")
+  .addPositionalParam("attributeType", "Attribute type") // <-- add this
   .setAction(async (args) => {
     //console.log('Received args:', args);
     // 1) load the file contents
@@ -28,5 +29,14 @@ task("testRequest_with_go", "Runs the Go‐powered testRequest")
 
     // 3) invoke your Go wrapper
     const { main } = await import("../scripts/maintenance/testRequest_with_go");
-    await main(args.type, args.attribute, raw, args.operatorStr, args.valueParam, args.tokenID, args.contextParam);
+    await main(
+      args.type,
+      args.attribute,
+      raw,
+      args.operatorStr,
+      args.valueParam,
+      args.tokenID,
+      args.contextParam,
+      args.attributeType
+    );
   });

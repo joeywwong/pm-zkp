@@ -31,7 +31,7 @@ These instructions will get the development environment up and running on your l
 - [ ] Submit proof request to verifier contract
   - [x] Frontend calls POST (with credentials schema, attribute and value, e.g. birthday > 19900101) to ask backend to compute proof request payload 
   - [x] Compute proof request payload using the script from iden3’s repository and the Go script inside, and host the service on the backend
-  - [ ] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
+  - [x] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
 - [ ] Remove spending conditions
 

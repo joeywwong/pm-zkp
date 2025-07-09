@@ -15,8 +15,8 @@ app.get('/api', (req, res) => {
 });
 
 app.post("/api/requestPayload", async (req, res) => {
-  const { type, attribute, schema, operatorStr, valueParam, tokenID, contextParam } = req.body;
-  if (!type || !attribute || !schema || operatorStr === undefined || valueParam === undefined || tokenID === undefined || contextParam === undefined) {
+  const { type, attribute, schema, operatorStr, valueParam, tokenID, contextParam, attributeType } = req.body;
+  if (!type || !attribute || !schema || operatorStr === undefined || valueParam === undefined || tokenID === undefined || contextParam === undefined || !attributeType) {
     return res.status(400).json({ error: "Missing one or more required fields in request body" });
   }
 
@@ -37,7 +37,8 @@ app.post("/api/requestPayload", async (req, res) => {
     operatorStr,
     valueParam,
     tokenID.toString(),
-    contextParam
+    contextParam,
+    attributeType
   ];
 
   execFile("npx", args, { cwd: path.resolve(__dirname, "iden3_repo") }, (error, stdout, stderr) => {
