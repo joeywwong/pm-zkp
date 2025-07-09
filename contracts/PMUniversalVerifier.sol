@@ -8,6 +8,7 @@ import {ICircuitValidator} from '@iden3/contracts/interfaces/ICircuitValidator.s
 import {EmbeddedZKPVerifier} from '@iden3/contracts/verifiers/EmbeddedZKPVerifier.sol';
 import {UniversalVerifier} from '@iden3/contracts/verifiers/UniversalVerifier.sol';
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import { IZKPVerifier } from '@iden3/contracts/interfaces/IZKPVerifier.sol';
 
 contract PMUniversalVerifier is ERC1155, Ownable {
     address[] private admins;
@@ -73,7 +74,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
 
     // An array to store proof_request_ids only for iteration.
     uint64[] public proofRequestIDs;
-
+    
     // Add a new proof request and the corresponding prover's address.
     // The array proofRequestIDs is updated accordingly.
     function addProofRequestAndAddress(uint256 tokenID, uint64 requestID, address prover) public onlyAdmin {
@@ -81,6 +82,21 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         require(tokenID_proofRequest_address[tokenID][requestID] == address(0), "Proof request already exists");
         tokenID_proofRequest_address[tokenID][requestID] = prover;
         proofRequestIDs.push(requestID);
+    }
+    
+    function addProofRequest_VerifierAndPM(uint64 requestId,
+        string calldata metadata,
+        ICircuitValidator validator,
+        bytes calldata data, uint256 tokenID, address prover) public{
+            //Build the IZKPVerifier.ZKPRequest struct
+            IZKPVerifier.ZKPRequest memory req = IZKPVerifier.ZKPRequest({
+                metadata: metadata,
+                validator: validator,
+                data: data
+            });
+
+            verifier.setZKPRequest(requestId, req);
+            addProofRequestAndAddress (tokenID, requestId, prover);
     }
     
     // Delete a proof request and the address by ID.
