@@ -294,7 +294,7 @@ export default function CallContract() {
           schema: jsonLD,
           operatorStr: selectedOperator,
           valueParam,
-          tokenID: 99999,
+          tokenID: tokenID_addRequest,
           contextParam: jsonLdUrl,
           attributeType
         })
@@ -308,29 +308,32 @@ export default function CallContract() {
         setRequestResult(`Response: ${JSON.stringify(data)}`);
       }
 
-      // Now call the verifier contract's setZKPRequest
+      // Now call the signerContract's addProofRequest_VerifierAndPM
       if (
-        signerVerifierContract &&
+        signerContract &&
         data.requestId &&
         data.metadata &&
         data.validator &&
-        data.data
+        data.data &&
+        tokenID_addRequest &&
+        proverAddress
       ) {
         setVerifierTxStatus('Submitting...');
-        // Convert types as needed
         const requestIdBN = BigInt(data.requestId); // uint64
         const metadata = data.metadata;
         const validator = data.validator;
         const bytesData = data.data; // should be 0x... hex string
+        const tokenId = tokenID_addRequest;
+        const prover = proverAddress;
 
         try {
-          const tx = await signerVerifierContract.setZKPRequest(
+          const tx = await signerContract.addProofRequest_VerifierAndPM(
             requestIdBN,
-            {
-              metadata,
-              validator,
-              data: bytesData
-            }
+            metadata,
+            validator,
+            bytesData,
+            tokenId,
+            prover
           );
           setVerifierTxHash(tx.hash);
           setVerifierTxStatus('Pending...');
@@ -508,7 +511,7 @@ export default function CallContract() {
       */}
 
       <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Set Proof Request on Verifier Contract (UniversalVerifier.sol)
+        Set Proof Request
       </Typography>
 
       {/* JSON-LD URL Input */}
@@ -656,22 +659,10 @@ export default function CallContract() {
         </FormControl>
       )}
 
-      {/* Set Proof Request Button */}
-      <Box mt={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleSetProofRequest}
-          disabled={!selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !!error}
-        >
-          Set Proof Request
-        </Button>
-      </Box>
-
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Set Proof Request on PM Contract
+      {/* PM Contract Fields */}
+      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+        PM Contract Parameters
       </Typography>
-
       <Stack direction="row" spacing={2} mt={2}>
         <TextField
           label="TokenID"
@@ -680,6 +671,7 @@ export default function CallContract() {
           size="small"
           fullWidth
         />
+        {/*
         <TextField
           label="Proof Request ID"
           value={requestID}
@@ -687,6 +679,7 @@ export default function CallContract() {
           size="small"
           fullWidth
         />
+        */}
         <TextField
           label="Prover's address"
           value={proverAddress}
@@ -696,21 +689,41 @@ export default function CallContract() {
         />
       </Stack>
 
-      <Box mt={2}>
+      {/* Buttons */}
+      <Stack direction="row" spacing={2} mt={3}>
         <Button
           variant="contained"
+          color="primary"
+          onClick={handleSetProofRequest}
+          disabled={
+            !selectedSchema ||
+            !selectedAttribute ||
+            !selectedOperator ||
+            !filterValue ||
+            !!error ||
+            !tokenID_addRequest ||
+            !proverAddress
+          }
+        >
+          Set Proof Request
+        </Button>
+        {/*
+        <Button
+          variant="outlined"
           onClick={addProofRequest}
           disabled={isSubmitting}
           startIcon={isSubmitting && <CircularProgress size={18} />}
         >
-          {isSubmitting ? 'Submitting…' : 'Add Proof Request'}
+          {isSubmitting ? 'Submitting…' : 'Add to PM Contract'}
         </Button>
-      </Box>
+        */}
+      </Stack>
 
+      {/* PM Contract Transaction Status */}
       {txHash && (
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#f9f9f9' }}>
           <Typography variant="body2">
-            <strong>Tx Hash:</strong>{' '}
+            <strong>PM Contract Tx Hash:</strong>{' '}
             <Link
               href={`https://amoy.polygonscan.com/tx/${txHash}`}
               target="_blank"
@@ -721,12 +734,12 @@ export default function CallContract() {
             </Link>
           </Typography>
           <Typography variant="body2">
-            <strong>Status:</strong> {txStatus}
+            <strong>PM Contract Status:</strong> {txStatus}
           </Typography>
         </Paper>
       )}
 
-      {/* Verifier Transaction Result Display */}
+      {/* Verifier Contract Transaction Status */}
       {(verifierTxHash || verifierTxStatus || verifierTxError) && (
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#fffde7' }}>
           {verifierTxHash && (
@@ -744,12 +757,12 @@ export default function CallContract() {
           )}
           {verifierTxStatus && (
             <Typography variant="body2">
-              <strong>Status:</strong> {verifierTxStatus}
+              <strong>Verifier Status:</strong> {verifierTxStatus}
             </Typography>
           )}
           {verifierTxError && (
             <Typography color="error" variant="body2">
-              <strong>Error:</strong> {verifierTxError}
+              <strong>Verifier Error:</strong> {verifierTxError}
             </Typography>
           )}
         </Paper>
@@ -759,7 +772,7 @@ export default function CallContract() {
       {requestResult && (
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#e8f5e9' }}>
           <Typography variant="body2">
-            {requestResult}
+            <strong>Request Result:</strong> {requestResult}
           </Typography>
         </Paper>
       )}

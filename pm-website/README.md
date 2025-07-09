@@ -28,15 +28,19 @@ These instructions will get the development environment up and running on your l
 - [x] Transfer programmable money
 - [x] Display spending conditions before token transfer
 - [x] Generate a link for proof verification if ZKP is not verified
-- [ ] Submit proof request to verifier contract
+- [x] Submit proof request to verifier contract
   - [x] Frontend calls POST (with credentials schema, attribute and value, e.g. birthday > 19900101) to ask backend to compute proof request payload 
   - [x] Compute proof request payload using the script from iden3’s repository and the Go script inside, and host the service on the backend
   - [x] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
-- [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
+- [x] Submit a spending condition for a token (the proof request and the prover’s address) to the 
+PM contract
+- [x] One button to Submit proof request to verifier contract and PM contract
 - [ ] Remove spending conditions
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
+- [x] One button to Submit proof request to verifier contract and PM contract
+- [ ] Combine 'mint new token' and 'mint existing token'
 - [ ] Let user choose who must submit proof (sender / receiver) via dropdown  
   - instead of manually entering a prover address
 - [ ] Update token balances after minting token

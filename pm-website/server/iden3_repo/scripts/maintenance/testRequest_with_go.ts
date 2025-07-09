@@ -29,7 +29,7 @@ export async function main(
   valueParam: any,
   tokenID: number,
   contextParam: string,
-  attributeType: string // <-- add this
+  attributeType: string
 ) {
   try {
     // Log incoming parameters
