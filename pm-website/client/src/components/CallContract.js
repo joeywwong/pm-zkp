@@ -40,6 +40,7 @@ export default function CallContract() {
   const [balanceAddress, setBalanceAddress] = useState('');
   const [balanceTokenId, setBalanceTokenId] = useState('');
   const [balance, setBalance] = useState(null);
+  const [spendingConditions, setSpendingConditions] = useState([]);
 
   const fetchBalance = async () => {
     if (!staticContract) {
@@ -49,6 +50,22 @@ export default function CallContract() {
     try {
       const result = await staticContract.balanceOf(balanceAddress, balanceTokenId);
       setBalance(result.toString());
+      // Fetch spending conditions for this token
+      if (balanceTokenId) {
+        try {
+          const [ids, conditions] = await staticContract.getSpendingConditions(balanceTokenId);
+          const formatted = ids.map((id, idx) => ({
+            proofRequestId: id,
+            ...conditions[idx]
+          }));
+          setSpendingConditions(formatted);
+          console.log('Spending conditions:', formatted);
+        } catch (err) {
+          setSpendingConditions([]);
+        }
+      } else {
+        setSpendingConditions([]);
+      }
     } catch (error) {
       console.error('Balance fetch failed:', error);
     }
@@ -194,13 +211,13 @@ export default function CallContract() {
     setError(err);
   };
 
-  // Minting state
+  // Mint Token state (single form for both new and existing)
   const [mintRecipient, setMintRecipient] = useState('');
-  const [mintTokenId, setMintTokenId] = useState('');
   const [mintTokenName, setMintTokenName] = useState('');
   const [mintAmount, setMintAmount] = useState('');
   const [isMinting, setIsMinting] = useState(false);
 
+  // Mint Token handler (uses contract's mintToken logic)
   const mintToken = async () => {
     if (!signerContract || !account) {
       alert('Connect wallet and load contract first');
@@ -208,9 +225,8 @@ export default function CallContract() {
     }
     setIsMinting(true);
     try {
-      const tx = await signerContract.mintNewToken(
+      const tx = await signerContract.mintToken(
         mintRecipient,
-        mintTokenId,
         mintAmount,
         "0x",
         mintTokenName
@@ -221,35 +237,6 @@ export default function CallContract() {
       alert('Mint failed: ' + (err.reason || err.message));
     } finally {
       setIsMinting(false);
-    }
-  };
-
-  // Mint Existing Token state
-  const [mintExistRecipient, setMintExistRecipient] = useState('');
-  const [mintExistTokenId, setMintExistTokenId] = useState('');
-  const [mintExistAmount, setMintExistAmount] = useState('');
-  const [isMintingExisting, setIsMintingExisting] = useState(false);
-
-  // Mint Existing Token handler
-  const mintExistingToken = async () => {
-    if (!signerContract || !account) {
-      alert('Connect wallet and load contract first');
-      return;
-    }
-    setIsMintingExisting(true);
-    try {
-      const tx = await signerContract.mintExistingToken(
-        mintExistRecipient,
-        mintExistTokenId,
-        mintExistAmount,
-        "0x"
-      );
-      await tx.wait();
-      alert('Existing token minted!');
-    } catch (err) {
-      alert('Mint failed: ' + (err.reason || err.message));
-    } finally {
-      setIsMintingExisting(false);
     }
   };
 
@@ -326,6 +313,13 @@ export default function CallContract() {
         const tokenId = tokenID_addRequest;
         const prover = proverAddress;
 
+        // Prepare spending condition struct for Solidity
+        const condition = {
+          attribute: selectedAttribute,
+          operatorStr: selectedOperator,
+          value: filterValue
+        };
+
         try {
           const tx = await signerContract.addProofRequest_VerifierAndPM(
             requestIdBN,
@@ -333,13 +327,25 @@ export default function CallContract() {
             validator,
             bytesData,
             tokenId,
-            prover
+            prover,
+            condition
           );
           setVerifierTxHash(tx.hash);
           setVerifierTxStatus('Pending...');
           const receipt = await tx.wait();
           if (receipt.status === 1) {
             setVerifierTxStatus('Confirmed');
+            // Refresh spending conditions for this token
+            if (tokenId) {
+              try {
+                const [ids, conditions] = await staticContract.getSpendingConditions(tokenId);
+                const formatted = ids.map((id, idx) => ({
+                  proofRequestId: id,
+                  ...conditions[idx]
+                }));
+                setSpendingConditions(formatted);
+              } catch {}
+            }
           } else {
             setVerifierTxStatus('Failed');
           }
@@ -355,9 +361,9 @@ export default function CallContract() {
 
   return (
     <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
-      {/* Mint New Token Section */}
+      {/* Mint Token Section (single form) */}
       <Typography variant="h5" gutterBottom>
-        Mint New Token
+        Mint Token
       </Typography>
       <Stack direction="row" spacing={2} mt={2}>
         <TextField
@@ -367,15 +373,6 @@ export default function CallContract() {
           size="small"
           fullWidth
         />
-        <TextField
-          label="Token ID"
-          value={mintTokenId}
-          onChange={e => setMintTokenId(e.target.value)}
-          size="small"
-          fullWidth
-        />
-      </Stack>
-      <Stack direction="row" spacing={2} mt={2}>
         <TextField
           label="Token Name"
           value={mintTokenName}
@@ -397,50 +394,10 @@ export default function CallContract() {
           variant="contained"
           color="primary"
           onClick={mintToken}
-          disabled={isMinting || !mintRecipient || !mintTokenId || !mintTokenName || !mintAmount}
+          disabled={isMinting || !mintRecipient || !mintTokenName || !mintAmount}
           startIcon={isMinting && <CircularProgress size={18} />}
         >
           {isMinting ? 'Minting…' : 'Mint Token'}
-        </Button>
-      </Box>
-
-      {/* Mint Existing Token Section */}
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Mint Existing Token
-      </Typography>
-      <Stack direction="row" spacing={2} mt={2}>
-        <TextField
-          label="Recipient Address"
-          value={mintExistRecipient}
-          onChange={e => setMintExistRecipient(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <TextField
-          label="Token ID"
-          value={mintExistTokenId}
-          onChange={e => setMintExistTokenId(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <TextField
-          label="Amount"
-          type="number"
-          value={mintExistAmount}
-          onChange={e => setMintExistAmount(e.target.value)}
-          size="small"
-          fullWidth
-        />
-      </Stack>
-      <Box mt={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={mintExistingToken}
-          disabled={isMintingExisting || !mintExistRecipient || !mintExistTokenId || !mintExistAmount}
-          startIcon={isMintingExisting && <CircularProgress size={18} />}
-        >
-          {isMintingExisting ? 'Minting…' : 'Mint Existing Token'}
         </Button>
       </Box>
 
@@ -468,9 +425,24 @@ export default function CallContract() {
         </Button>
       </Stack>
       {balance !== null && (
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          Balance: <b>{balance}</b>
-        </Typography>
+        <>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Balance: <b>{balance}</b>
+          </Typography>
+          {spendingConditions.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1">Spending Conditions:</Typography>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {spendingConditions.map((cond, idx) => (
+                  <li key={cond.proofRequestId.toString()}>
+                    <b>ProofRequestID:</b> {cond.proofRequestId.toString()}<br/>
+                    <b>Attribute:</b> {cond.attribute} <b>Operator:</b> {cond.operatorStr} <b>Value:</b> {cond.value}
+                  </li>
+                ))}
+              </ul>
+            </Box>
+          )}
+        </>
       )}
 
       {/* Uncomment to enable transfer UI */}

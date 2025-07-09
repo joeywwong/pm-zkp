@@ -33,6 +33,7 @@ export default function TokenList() {
   const [loading, setLoading] = useState(true);
   const [transferring, setTransferring] = useState({});
   const [tokenNames, setTokenNames] = useState({});
+  const [spendingConditions, setSpendingConditions] = useState({});
 
   useEffect(() => {
     if (!staticContract || !account) return;
@@ -57,6 +58,30 @@ export default function TokenList() {
           names[id] = await staticContract.tokenName(id);
         }
         setTokenNames(names);
+
+        // 4. Fetch spending conditions for each token
+        const scs = {};
+        for (const id of ids) {
+          try {
+            const [scIds, scArr] = await staticContract.getSpendingConditions(id);
+            scs[id] = scIds.map((scId, idx) => {
+              const cond = scArr[idx];
+              // Support both named and indexed struct return
+              const attribute = cond.attribute || cond[0] || '';
+              const operatorStr = cond.operatorStr || cond[1] || '';
+              const value = cond.value || cond[2] || '';
+              return {
+                proofRequestId: scId,
+                attribute,
+                operatorStr,
+                value
+              };
+            });
+          } catch {
+            scs[id] = [];
+          }
+        }
+        setSpendingConditions(scs);
       } catch (err) {
         console.error('TokenList load error:', err);
       } finally {
@@ -155,6 +180,16 @@ export default function TokenList() {
     );
   }
 
+  // Operator translation map
+  const operatorLabelMap = {
+    '$eq': 'is equal to',
+    '$ne': 'is not equal to',
+    '$in': 'matches one of the values',
+    '$nin': 'matches none of the values',
+    '$lt': 'is less than',
+    '$gt': 'is greater than',
+  };
+
   return (
     <Box sx={{ flexGrow: 1, mt: 2 }}>
       <Typography variant="h5" gutterBottom align="center">
@@ -174,6 +209,32 @@ export default function TokenList() {
                 <Typography variant="body2" sx={{ mb: 2 }}>
                   Balance: <b>{balances[tokenIds.indexOf(id)] || '0'}</b>
                 </Typography>
+                {spendingConditions[id] && spendingConditions[id].length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 2 }}>Spending Conditions:</Typography>
+                    <ul style={{ margin: 0, paddingLeft: 20 }}>
+                      {spendingConditions[id].map((cond, idx) => {
+                        // Translate operatorStr if possible
+                        let opLabel = cond.operatorStr;
+                        if (operatorLabelMap[opLabel]) {
+                          opLabel = operatorLabelMap[opLabel];
+                        } else if ((opLabel || '').startsWith('$')) {
+                          opLabel = opLabel.substring(1);
+                        } else if (!opLabel) {
+                          opLabel = '';
+                        }
+                        return (
+                          <li key={cond.proofRequestId.toString()} style={{ marginBottom: 8 }}>
+                            <Typography variant="body2" sx={{ mb: 0 }}>
+                              Proof request ID: {cond.proofRequestId.toString()}
+                            </Typography>
+                            {cond.attribute} {opLabel} {cond.value}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </Box>
+                )}
                 <Stack spacing={2}>
                   <TextField
                     label="Recipient Address"
