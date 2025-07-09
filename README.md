@@ -39,21 +39,21 @@ These instructions will get the development environment up and running on your l
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
-- [ ] One function for minting new token or existing token, instead of two functions
-- [ ] A variable to store spending conditions for each token, so GUI can show them
+- [x] One function for minting new token or existing token, instead of two functions
+- [x] A variable to store spending conditions for each token, so GUI can show them
+- [x] Generate unique token id automatically
 - [ ] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the proofer, not inputing the prover's address
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
 - [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
-- [ ] Combine 'mint new token' and 'mint existing token'
+- [x] Combine 'mint new token' and 'mint existing token'
 - [ ] Let user choose who must submit proof (sender / receiver) via dropdown  
   - instead of manually entering a prover address
 - [ ] Update token balances after minting token
 - [ ] Reminder after transaction success
-- [ ] Show spending conditions above transfer button, e.g. birthday before 20250101
+- [x] Show spending conditions above transfer button, e.g. birthday before 20250101
 - [x] Show token names over ID
-- [ ] Generate unique token id automatically
 
 ### Evaluation
 - [ ] Record transaction gas fees in the database

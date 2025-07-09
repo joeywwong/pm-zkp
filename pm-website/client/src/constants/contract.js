@@ -2,7 +2,7 @@ import contractJson from './PMUniversalVerifier_compData.json';
 import verifierContract from './UniversalVerifier_compData';
 
 //export const CONTRACT_ADDRESS = '0x030F8C17c7949677503fe679A68af3f9F66430A7';
-export const CONTRACT_ADDRESS = '0x430427f42b289bAB20B827f2a076f94Ff5595265';
+export const CONTRACT_ADDRESS = '0x02eB977c3935Fc04abb9880BAdfb56A1712Ae670';
 export const ABI = contractJson.abi;
 export const VERIFIER_CONTRACT_ADDRESS = '0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c';
 export const VERIFIER_ABI = verifierContract.abi;
