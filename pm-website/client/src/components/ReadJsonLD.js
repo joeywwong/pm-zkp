@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import TextField from '@mui/material/TextField';
 
-export default function ReadJsonLD({ onData }) {
-  const [link, setLink] = useState('');
+export default function ReadJsonLD({ url, setUrl, onData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const lastJsonRef = useRef(null);
+  const lastUrlRef = useRef('');
 
   const normalizeUrl = url =>
     url.startsWith('ipfs://')
@@ -11,35 +13,46 @@ export default function ReadJsonLD({ onData }) {
       : url;
 
   useEffect(() => {
-    if (!link.trim()) return;
+    if (!url?.trim() || url === lastUrlRef.current) return;
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      const url = normalizeUrl(link.trim());
-      try {
-        const res = await fetch(url);
+    setLoading(true);
+    setError(null);
+    const fetchUrl = normalizeUrl(url.trim());
+    fetch(fetchUrl)
+      .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!cancelled) onData(json);
-      } catch (err) {
+        return res.json();
+      })
+      .then(json => {
+        if (!cancelled) {
+          // Only call onData if JSON actually changed
+          if (JSON.stringify(json) !== JSON.stringify(lastJsonRef.current)) {
+            lastJsonRef.current = json;
+            onData(json);
+          }
+          lastUrlRef.current = url;
+        }
+      })
+      .catch(err => {
         if (!cancelled) setError(err.message);
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    })();
+      });
     return () => { cancelled = true; };
-  }, [link]);
+    // Only refetch if url changes, not onData
+    // eslint-disable-next-line
+  }, [url]);
 
   return (
     <div className="mb-4">
       <label className="block mb-1 font-medium">Load JSON‑LD:</label>
-      <input
-        type="text"
-        className="w-full p-2 border rounded"
-        placeholder="https://... or ipfs://..."
-        value={link}
-        onChange={e => setLink(e.target.value)}
+      <TextField
+        label="JSON-LD URL"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+        fullWidth
+        margin="normal"
       />
       {loading && (
         <div className="mt-2 flex items-center">

@@ -253,6 +253,45 @@ export default function CallContract() {
     }
   };
 
+  // NEW: JSON-LD URL state
+  const [jsonLdUrl, setJsonLdUrl] = useState('');
+  const [requestResult, setRequestResult] = useState('');
+
+  const handleSetProofRequest = async () => {
+    console.log({ jsonLD, selectedSchema, selectedAttribute, selectedOperator, filterValue, jsonLdUrl });
+    if (!jsonLD || !selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !jsonLdUrl) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/requestPayload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: selectedSchema,
+          attribute: selectedAttribute,
+          schema: jsonLD,
+          operatorStr: selectedOperator,
+          valueParam: attributeType === 'integer' || attributeType === 'double'
+            ? Number(filterValue)
+            : filterValue,
+          tokenID: 99999, // Use 99999 as a placeholder
+          contextParam: jsonLdUrl
+        })
+      });
+      const data = await response.json();
+      // Show requestId if present, otherwise show the whole response
+      if (data.requestId) {
+        setRequestResult(`Request ID: ${data.requestId}`);
+      } else {
+        setRequestResult(`Response: ${JSON.stringify(data)}`);
+      }
+    } catch (err) {
+      setRequestResult('Failed to send proof request: ' + err.message);
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
       {/* Mint New Token Section */}
@@ -414,16 +453,29 @@ export default function CallContract() {
         Set Proof Request on Verifier Contract (UniversalVerifier.sol)
       </Typography>
 
+      {/* JSON-LD URL Input */}
+      {/* <TextField
+        label="JSON-LD URL"
+        value={jsonLdUrl}
+        onChange={e => setJsonLdUrl(e.target.value)}
+        fullWidth
+        margin="normal"
+      /> */}
+
       {/* JSON-LD Loader */}
       <Box mb={2}>
-        <ReadJsonLD onData={data => {
-          setJsonLD(data);
-          const ctx = (data['@context'] && data['@context'][0]) || {};
-          const names = Object.entries(ctx)
-            .filter(([key, val]) => typeof val === 'object')
-            .map(([key]) => key);
-          setCredentialNames(names);
-        }} />
+        <ReadJsonLD
+          url={jsonLdUrl}
+          setUrl={setJsonLdUrl}
+          onData={data => {
+            setJsonLD(data);
+            const ctx = (data['@context'] && data['@context'][0]) || {};
+            const names = Object.entries(ctx)
+              .filter(([key, val]) => typeof val === 'object')
+              .map(([key]) => key);
+            setCredentialNames(names);
+          }}
+        />
       </Box>
 
       {/* Schema Type Dropdown */}
@@ -551,10 +603,7 @@ export default function CallContract() {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => {
-            // TODO: implement set proof request logic here
-            alert('Set Proof Request clicked!');
-          }}
+          onClick={handleSetProofRequest}
           disabled={!selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !!error}
         >
           Set Proof Request
@@ -615,6 +664,15 @@ export default function CallContract() {
           </Typography>
           <Typography variant="body2">
             <strong>Status:</strong> {txStatus}
+          </Typography>
+        </Paper>
+      )}
+
+      {/* Request Result Display */}
+      {requestResult && (
+        <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#e8f5e9' }}>
+          <Typography variant="body2">
+            {requestResult}
           </Typography>
         </Paper>
       )}

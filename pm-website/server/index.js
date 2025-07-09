@@ -15,12 +15,11 @@ app.get('/api', (req, res) => {
 });
 
 app.post("/api/requestPayload", async (req, res) => {
-  const { type, attribute, schema } = req.body;
-  if (!type || !attribute || !schema) {
-    return res.status(400).json({ error: "Missing type, attribute, or schema in request body" });
+  const { type, attribute, schema, operatorStr, valueParam, tokenID, contextParam } = req.body;
+  if (!type || !attribute || !schema || operatorStr === undefined || valueParam === undefined || tokenID === undefined || contextParam === undefined) {
+    return res.status(400).json({ error: "Missing one or more required fields in request body" });
   }
 
-  // Option A: Write schema to a temp file and pass its path
   const tmpPath = path.join(__dirname, "iden3_repo", `schema-${Date.now()}.json`);
   try {
     fs.writeFileSync(tmpPath, JSON.stringify(schema, null, 2), "utf-8");
@@ -34,24 +33,23 @@ app.post("/api/requestPayload", async (req, res) => {
     "testRequest_with_go",
     type,
     attribute,
-    tmpPath   // your task reads it via `fs.readFileSync(process.argv[5])`
+    tmpPath,
+    operatorStr,
+    valueParam,
+    tokenID.toString(),
+    contextParam
   ];
 
-  // execFile will avoid all shell-escaping issues
-  execFile("npx", args, { cwd: path.resolve(__dirname, "iden3_repo") }, (err, stdout, stderr) => {
-    // clean up temp file
-    fs.unlinkSync(tmpPath);
-
-    if (err) {
-      console.error("error:", stderr);
-      return res.status(500).json({ error: stderr });
+  execFile("npx", args, { cwd: path.resolve(__dirname, "iden3_repo") }, (error, stdout, stderr) => {
+    if (error) {
+      // Try to parse error details from stderr or stdout
+      let errorMsg = stderr || stdout || error.message;
+      return res.status(500).json({ error: errorMsg });
     }
     try {
-      // Parse the JSON output from the TypeScript script
       const result = JSON.parse(stdout);
       res.json(result);
     } catch (e) {
-      // If parsing fails, return raw output
       res.json({ output: stdout });
     }
   });
