@@ -67,14 +67,50 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     // Mapping from token ID to its name. But the token name and other attributes can be stored as uri 
     mapping(uint256 => string) public tokenName;
 
+
     // Mapping from tokenID to proof_request_id to a wallet address (the prover's address).
     // tokenID → (proofRequestID → prover address)
     // The address owner can be a token sender, a token receiver or any third-party prover.
     mapping(uint256 => mapping(uint64 => address)) public tokenID_proofRequest_address;
 
+    // Struct to represent a spending condition
+    struct SpendingCondition {
+        string attribute;
+        string operatorStr;
+        string value;
+    }
+
+    // Mapping from tokenID to proofRequestID to spending condition
+    // tokenID => (proofRequestID => SpendingCondition)
+    mapping(uint256 => mapping(uint64 => SpendingCondition)) public spendingConditions;
+
     // An array to store proof_request_ids only for iteration.
     uint64[] public proofRequestIDs;
     
+    /// @notice Get all spending conditions for a given tokenID
+    function getSpendingConditions(uint256 tokenID) external view returns (uint64[] memory, SpendingCondition[] memory) {
+        uint64[] memory ids = proofRequestIDs;
+        uint256 count = 0;
+        // First, count how many proofRequestIDs are associated with this tokenID
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (bytes(spendingConditions[tokenID][ids[i]].attribute).length > 0) {
+                count++;
+            }
+        }
+        // Prepare arrays for output
+        uint64[] memory filteredIDs = new uint64[](count);
+        SpendingCondition[] memory conditions = new SpendingCondition[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (bytes(spendingConditions[tokenID][ids[i]].attribute).length > 0) {
+                filteredIDs[idx] = ids[i];
+                conditions[idx] = spendingConditions[tokenID][ids[i]];
+                idx++;
+            }
+        }
+        return (filteredIDs, conditions);
+    }
+
     // Add a new proof request and the corresponding prover's address.
     // The array proofRequestIDs is updated accordingly.
     function addProofRequestAndAddress(uint256 tokenID, uint64 requestID, address prover) public onlyAdmin {
@@ -84,19 +120,30 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         proofRequestIDs.push(requestID);
     }
     
-    function addProofRequest_VerifierAndPM(uint64 requestId,
+    function addProofRequest_VerifierAndPM(
+        uint64 requestId,
         string calldata metadata,
         ICircuitValidator validator,
-        bytes calldata data, uint256 tokenID, address prover) public{
-            //Build the IZKPVerifier.ZKPRequest struct
-            IZKPVerifier.ZKPRequest memory req = IZKPVerifier.ZKPRequest({
-                metadata: metadata,
-                validator: validator,
-                data: data
-            });
+        bytes calldata data,
+        uint256 tokenID,
+        address prover,
+        SpendingCondition calldata condition
+    ) public {
+        // Build the IZKPVerifier.ZKPRequest struct
+        IZKPVerifier.ZKPRequest memory req = IZKPVerifier.ZKPRequest({
+            metadata: metadata,
+            validator: validator,
+            data: data
+        });
 
-            verifier.setZKPRequest(requestId, req);
-            addProofRequestAndAddress (tokenID, requestId, prover);
+        verifier.setZKPRequest(requestId, req);
+        addProofRequestAndAddress(tokenID, requestId, prover);
+        // Add the spending condition
+        spendingConditions[tokenID][requestId] = SpendingCondition({
+            attribute: condition.attribute,
+            operatorStr: condition.operatorStr,
+            value: condition.value
+        });
     }
     
     // Delete a proof request and the address by ID.
@@ -130,26 +177,39 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     // Custom error declaration (check if token id already taken, when minting new token)
     error TokenIDTaken(uint256 tokenID);
 
-    // Call this function when creating new token for new spending conditions
-    function mintNewToken(address to, uint256 ID, uint256 amount, bytes calldata data, string calldata name) external onlyOwner {
-        // Add the token id to _allTokenIDs. If it returns false, the token id has been taken before.
-        if (!_allTokenIDs.add(ID)) {
-            revert TokenIDTaken(ID);
-        }
 
-        _mint(to, ID, amount, data);
-        // assign a name to the new token
-        tokenName[ID] = name;
-    }
-    
     // Reverts with TokenIDNotFound if the ID hasn’t been registered yet.
     error TokenIDNotFound(uint256 tokenID);
 
-    function mintExistingToken(address to, uint256 ID, uint256 amount, bytes calldata data) external onlyOwner {
-        if (!_allTokenIDs.contains(ID)) {
-        revert TokenIDNotFound(ID);
-    }
-        _mint(to, ID, amount, data);
+    /// @notice Mint a token by name. If the name exists, mint the existing token. If the name does not exist, mint a new token with a random unused ID and assign the name.
+    /// @dev The function no longer requires the ID argument. The name must be non-empty.
+    function mintToken(address to, uint256 amount, bytes calldata data, string calldata name) external onlyOwner {
+        require(bytes(name).length > 0, "Name required");
+        uint256 tokenID = 0;
+        bool found = false;
+        uint256[] memory ids = _allTokenIDs.values();
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (keccak256(bytes(tokenName[ids[i]])) == keccak256(bytes(name))) {
+                tokenID = ids[i];
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            _mint(to, tokenID, amount, data);
+        } else {
+            // Generate a random 4-5 digit ID (1000–99999)
+            uint256 newID;
+            uint256 attempts = 0;
+            do {
+                newID = 1000 + (uint256(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, to, name, attempts))) % 90000);
+                attempts++;
+                require(attempts < 100, "Unable to find unique short token ID");
+            } while (_allTokenIDs.contains(newID));
+            require(_allTokenIDs.add(newID), "TokenIDTaken");
+            _mint(to, newID, amount, data);
+            tokenName[newID] = name;
+        }
     }
 
     function burn(address account, uint256 ID, uint256 amount) external onlyOwner {

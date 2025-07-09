@@ -39,8 +39,8 @@ These instructions will get the development environment up and running on your l
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
-- [ ] One function for minting new token or existing token, instead of two functions
-- [ ] A variable to store spending conditions for each token, so GUI can show them
+- [x] One function for minting new token or existing token, instead of two functions
+- [x] A variable to store spending conditions for each token, so GUI can show them
 - [ ] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the proofer, not inputing the prover's address
 
 ### GUI fix
