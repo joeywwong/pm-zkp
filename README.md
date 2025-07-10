@@ -45,7 +45,7 @@ These instructions will get the development environment up and running on your l
 =======
 - [x] Generate unique token id automatically
 >>>>>>> feature/3-website
-- [ ] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the proofer, not inputing the prover's address
+- [x] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the prover, not inputing the prover's address
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components

@@ -68,10 +68,9 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     mapping(uint256 => string) public tokenName;
 
 
-    // Mapping from tokenID to proof_request_id to a wallet address (the prover's address).
-    // tokenID → (proofRequestID → prover address)
-    // The address owner can be a token sender, a token receiver or any third-party prover.
-    mapping(uint256 => mapping(uint64 => address)) public tokenID_proofRequest_address;
+    // Mapping from tokenID to proof_request_id to prover's role (a string 'sender' or 'receiver').
+    // tokenID → (proofRequestID → 'sender' or 'receiver')
+    mapping(uint256 => mapping(uint64 => string)) public tokenID_proofRequest_role;
 
     // Struct to represent a spending condition
     struct SpendingCondition {
@@ -113,10 +112,17 @@ contract PMUniversalVerifier is ERC1155, Ownable {
 
     // Add a new proof request and the corresponding prover's address.
     // The array proofRequestIDs is updated accordingly.
-    function addProofRequestAndAddress(uint256 tokenID, uint64 requestID, address prover) public onlyAdmin {
+    // Add a new proof request and the corresponding role ('sender' or 'receiver').
+    // The array proofRequestIDs is updated accordingly.
+    function addProofRequestAndRole(uint256 tokenID, uint64 requestID, string calldata role) public onlyAdmin {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(tokenID_proofRequest_address[tokenID][requestID] == address(0), "Proof request already exists");
-        tokenID_proofRequest_address[tokenID][requestID] = prover;
+        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length == 0, "Proof request already exists");
+        require(
+            keccak256(bytes(role)) == keccak256(bytes("sender")) ||
+            keccak256(bytes(role)) == keccak256(bytes("receiver")),
+            "Role must be 'sender' or 'receiver'"
+        );
+        tokenID_proofRequest_role[tokenID][requestID] = role;
         proofRequestIDs.push(requestID);
     }
     
@@ -126,7 +132,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         ICircuitValidator validator,
         bytes calldata data,
         uint256 tokenID,
-        address prover,
+        string calldata role,
         SpendingCondition calldata condition
     ) public {
         // Build the IZKPVerifier.ZKPRequest struct
@@ -137,7 +143,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         });
 
         verifier.setZKPRequest(requestId, req);
-        addProofRequestAndAddress(tokenID, requestId, prover);
+        addProofRequestAndRole(tokenID, requestId, role);
         // Add the spending condition
         spendingConditions[tokenID][requestId] = SpendingCondition({
             attribute: condition.attribute,
@@ -148,10 +154,10 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     
     // Delete a proof request and the address by ID.
     // The array proofRequestIDs is updated accordingly.
-    function deleteProofRequestAndAddress(uint256 tokenID, uint64 requestID) public onlyAdmin {
+    function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) public onlyAdmin {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(tokenID_proofRequest_address[tokenID][requestID] != address(0), "Proof request does not exist");
-        delete tokenID_proofRequest_address[tokenID][requestID];
+        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length != 0, "Proof request does not exist");
+        delete tokenID_proofRequest_role[tokenID][requestID];
         // Remove ID from the array (swap-and-pop technique)
         for (uint256 i = 0; i < proofRequestIDs.length; i++) {
             if (proofRequestIDs[i] == requestID) {
@@ -218,21 +224,25 @@ contract PMUniversalVerifier is ERC1155, Ownable {
 
     // Custom error declaration
     error ProofNotVerified(uint64 requestID, address proverAddress);
-    
+
     // @dev Internal helper: revert if any proof for tokenID is still unverified.
     // Use this before token transfer.
-    function _checkAllProofsVerified(uint256 tokenID) internal view {
-      // iterate memory array (tempRequestIDs) to save gas fee
-      uint64[] memory tempRequestIDs = proofRequestIDs;
-      for (uint256 i = 0; i < tempRequestIDs.length; i++) {
-          // Retrieve the corresponding wallet address for this proof request ID
-          if (tokenID_proofRequest_address[tokenID][tempRequestIDs[i]] != address(0)){
-            address prover = tokenID_proofRequest_address[tokenID][tempRequestIDs[i]];
-            if (!verifier.getProofStatus(prover, tempRequestIDs[i]).isVerified) {
-            revert ProofNotVerified(tempRequestIDs[i], prover);
-          }
+    // Checks sender's and receiver's proofs as required by the prover's role.
+    function _checkAllProofsVerified(uint256 tokenID, address sender, address receiver) internal view {
+        uint64[] memory tempRequestIDs = proofRequestIDs;
+        for (uint256 i = 0; i < tempRequestIDs.length; i++) {
+            string memory role = tokenID_proofRequest_role[tokenID][tempRequestIDs[i]];
+            if (bytes(role).length == 0) continue;
+            if (keccak256(bytes(role)) == keccak256(bytes("sender"))) {
+                if (!verifier.getProofStatus(sender, tempRequestIDs[i]).isVerified) {
+                    revert ProofNotVerified(tempRequestIDs[i], sender);
+                }
+            } else if (keccak256(bytes(role)) == keccak256(bytes("receiver"))) {
+                if (!verifier.getProofStatus(receiver, tempRequestIDs[i]).isVerified) {
+                    revert ProofNotVerified(tempRequestIDs[i], receiver);
+                }
+            }
         }
-      }
     }
 
     // Override safeTransferFrom and include the onlyValidProofs modifier
@@ -244,7 +254,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         bytes memory data
     ) public virtual override {
         // Enforce per-token proof checks
-        _checkAllProofsVerified(tokenID);
+        _checkAllProofsVerified(tokenID, from, to);
 
         // Optionally add any additional custom logic here
         super.safeTransferFrom(from, to, tokenID, amount, data);
@@ -261,7 +271,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         require(to != address(0), "ERC1155: transfer to the zero address");
         for (uint256 i = 0; i < tokenIDs.length; ++i) {
             // Enforce per-token proof checks
-            _checkAllProofsVerified(tokenIDs[i]);
+            _checkAllProofsVerified(tokenIDs[i], from, to);
             safeTransferFrom(from, to, tokenIDs[i], amounts[i], data);
         }
     }
