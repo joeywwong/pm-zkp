@@ -35,16 +35,12 @@ These instructions will get the development environment up and running on your l
   - [x] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
-- [ ] Remove spending conditions
+- [x] Remove spending conditions
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
 - [x] One function for minting new token or existing token, instead of two functions
 - [x] A variable to store spending conditions for each token, so GUI can show them
-<<<<<<< HEAD
-=======
-- [x] Generate unique token id automatically
->>>>>>> feature/3-website
 - [x] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the prover, not inputing the prover's address
 
 ### GUI fix

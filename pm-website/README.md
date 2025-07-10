@@ -35,7 +35,7 @@ These instructions will get the development environment up and running on your l
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the 
 PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract
-- [ ] Remove spending conditions
+- [x] Remove spending conditions
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
