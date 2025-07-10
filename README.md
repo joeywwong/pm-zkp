@@ -51,8 +51,7 @@ These instructions will get the development environment up and running on your l
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
 - [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
 - [x] Combine 'mint new token' and 'mint existing token'
-- [ ] Let user choose who must submit proof (sender / receiver) via dropdown  
-  - instead of manually entering a prover address
+- [x] Let user choose who must submit proof (sender / receiver) via dropdown, instead of manually entering a prover address
 - [ ] Update token balances after minting token
 - [ ] Reminder after transaction success
 - [x] Show spending conditions above transfer button, e.g. birthday before 20250101
