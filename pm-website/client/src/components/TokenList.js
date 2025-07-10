@@ -253,13 +253,61 @@ export default function TokenList() {
                           proverRole = '';
                         }
                         return (
-                          <li key={cond.proofRequestId.toString()} style={{ marginBottom: 8 }}>
-                            <Typography variant="body2" sx={{ mb: 0 }}>
-                              Proof request ID: {cond.proofRequestId.toString()}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 0 }}>
-                              {proverRole} {cond.attribute} {opLabel} {cond.value}
-                            </Typography>
+                          <li key={cond.proofRequestId.toString()} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <Typography variant="body2" sx={{ mb: 0 }}>
+                                Proof request ID: {cond.proofRequestId.toString()}
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 0 }}>
+                                {proverRole} {cond.attribute} {opLabel} {cond.value}
+                              </Typography>
+                            </div>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              sx={{ ml: 2 }}
+                              onClick={async () => {
+                                if (!signerContract || !account) {
+                                  alert('Connect wallet and load contract first');
+                                  return;
+                                }
+                                try {
+                                  // Only admin can remove
+                                  const tx = await signerContract.deleteProofRequestAndRole(id, cond.proofRequestId);
+                                  await tx.wait();
+                                  // Refresh spending conditions for this token
+                                  try {
+                                    const [scIds, scArr] = await staticContract.getSpendingConditions(id);
+                                    // Fetch roles for each spending condition
+                                    const roles = [];
+                                    for (let i = 0; i < scIds.length; i++) {
+                                      const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
+                                      roles.push(role);
+                                    }
+                                    const updated = scIds.map((scId, idx) => {
+                                      const c = scArr[idx];
+                                      const attribute = c.attribute || c[0] || '';
+                                      const operatorStr = c.operatorStr || c[1] || '';
+                                      const value = c.value || c[2] || '';
+                                      const role = roles[idx] || '';
+                                      return {
+                                        proofRequestId: scId,
+                                        attribute,
+                                        operatorStr,
+                                        value,
+                                        role
+                                      };
+                                    });
+                                    setSpendingConditions(prev => ({ ...prev, [id]: updated }));
+                                  } catch {}
+                                } catch (err) {
+                                  alert('Failed to remove spending condition: ' + (err.reason || err.message));
+                                }
+                              }}
+                            >
+                              Remove
+                            </Button>
                           </li>
                         );
                       })}
