@@ -158,6 +158,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
         require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length != 0, "Proof request does not exist");
         delete tokenID_proofRequest_role[tokenID][requestID];
+        delete spendingConditions[tokenID][requestID];
         // Remove ID from the array (swap-and-pop technique)
         for (uint256 i = 0; i < proofRequestIDs.length; i++) {
             if (proofRequestIDs[i] == requestID) {
