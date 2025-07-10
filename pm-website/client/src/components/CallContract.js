@@ -127,47 +127,49 @@ export default function CallContract() {
   // Proof request inputs
   const [tokenID_addRequest, set_tokenID_addRequest] = useState('');
   const [requestID, set_requestID] = useState('');
-  const [proverAddress, set_proverAddress] = useState('');
+  // const [proverAddress, set_proverAddress] = useState(''); // REMOVE this line
+  // Role selection for proof request ('sender' or 'receiver')
+  const [proverRole, setproverRole] = useState('');
 
   // NEW transaction feedback state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [txStatus, setTxStatus] = useState('');
 
-  const addProofRequest = async () => {
-    if (!signerContract || !account) {
-      alert('Connect wallet and load contract first');
-      return;
-    }
+  // const addProofRequest = async () => {
+  //   if (!signerContract || !account) {
+  //     alert('Connect wallet and load contract first');
+  //     return;
+  //   }
 
-    setIsSubmitting(true);
-    setTxHash('');
-    setTxStatus('Pending…');
+  //   setIsSubmitting(true);
+  //   setTxHash('');
+  //   setTxStatus('Pending…');
 
-    try {
-      const tx = await signerContract.addProofRequestAndAddress(
-        tokenID_addRequest,
-        requestID,
-        proverAddress
-      );
+  //   try {
+  //     const tx = await signerContract.addProofRequestAndAddress(
+  //       tokenID_addRequest,
+  //       requestID,
+  //       proverAddress
+  //     );
 
-      // capture tx hash immediately
-      setTxHash(tx.hash);
+  //     // capture tx hash immediately
+  //     setTxHash(tx.hash);
 
-      // wait for confirmation
-      const receipt = await tx.wait();
-      if (receipt.status === 1) {
-        setTxStatus('Confirmed');
-      } else {
-        setTxStatus('Failed');
-      }
-    } catch (err) {
-      const reason = err.reason || err.errorArgs?.[1] || err.message;
-      setTxStatus(`Error: ${reason}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  //     // wait for confirmation
+  //     const receipt = await tx.wait();
+  //     if (receipt.status === 1) {
+  //       setTxStatus('Confirmed');
+  //     } else {
+  //       setTxStatus('Failed');
+  //     }
+  //   } catch (err) {
+  //     const reason = err.reason || err.errorArgs?.[1] || err.message;
+  //     setTxStatus(`Error: ${reason}`);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
   // proof request setup (json-LD) related
   // Determine attribute data type to adjust operator options
@@ -281,7 +283,7 @@ export default function CallContract() {
           schema: jsonLD,
           operatorStr: selectedOperator,
           valueParam,
-          tokenID: tokenID_addRequest,
+          tokenID: selectedTokenId, // Use the selected token ID from dropdown
           contextParam: jsonLdUrl,
           attributeType
         })
@@ -302,16 +304,16 @@ export default function CallContract() {
         data.metadata &&
         data.validator &&
         data.data &&
-        tokenID_addRequest &&
-        proverAddress
+        selectedTokenId &&
+        proverRole
       ) {
         setVerifierTxStatus('Submitting...');
         const requestIdBN = BigInt(data.requestId); // uint64
         const metadata = data.metadata;
         const validator = data.validator;
         const bytesData = data.data; // should be 0x... hex string
-        const tokenId = tokenID_addRequest;
-        const prover = proverAddress;
+        const tokenId = selectedTokenId;
+        const role = proverRole; // 'sender' or 'receiver'
 
         // Prepare spending condition struct for Solidity
         const condition = {
@@ -327,7 +329,7 @@ export default function CallContract() {
             validator,
             bytesData,
             tokenId,
-            prover,
+            role,
             condition
           );
           setVerifierTxHash(tx.hash);
@@ -358,6 +360,60 @@ export default function CallContract() {
       setRequestResult('Failed to send proof request: ' + err.message);
     }
   };
+
+  // Add state for selectable tokens
+  const [ownedTokens, setOwnedTokens] = useState([]);
+  const [selectedTokenId, setSelectedTokenId] = useState('');
+
+  // Fetch tokens with nonzero balance for dropdown
+  useEffect(() => {
+    async function fetchOwnedTokens() {
+      if (!staticContract || !account) {
+        setOwnedTokens([]);
+        setSelectedTokenId('');
+        return;
+      }
+      try {
+        // Get all token IDs as array of BigNumbers
+        const idsBig = await staticContract.allTokenIDs();
+        const ids = Array.isArray(idsBig) ? idsBig.map(id => id.toString()) : [];
+        if (ids.length === 0) {
+          setOwnedTokens([]);
+          setSelectedTokenId('');
+          return;
+        }
+        // Prepare batch for balanceOfBatch
+        const accountsArray = ids.map(() => account);
+        // balanceOfBatch expects [accounts], [ids] as arrays of same length
+        const balancesBig = await staticContract.balanceOfBatch(accountsArray, ids);
+        // Convert balances to string
+        const balances = Array.isArray(balancesBig) ? balancesBig.map(b => b.toString()) : [];
+        // Get token names
+        const names = {};
+        for (const id of ids) {
+          try {
+            names[id] = await staticContract.tokenName(id);
+          } catch {
+            names[id] = `Token #${id}`;
+          }
+        }
+        // Only include tokens with nonzero balance
+        const owned = ids
+          .map((id, idx) => ({ id, name: names[id] || `Token #${id}`, balance: balances[idx] }))
+          .filter(t => t.balance && t.balance !== '0');
+        setOwnedTokens(owned);
+        // Always reset selectedTokenId if the new account does not own the previously selected token
+        if (!owned.some(t => t.id === selectedTokenId)) {
+          setSelectedTokenId(owned.length > 0 ? owned[0].id : '');
+        }
+      } catch (err) {
+        setOwnedTokens([]);
+        setSelectedTokenId('');
+      }
+    }
+    fetchOwnedTokens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staticContract, account]);
 
   return (
     <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
@@ -402,6 +458,7 @@ export default function CallContract() {
       </Box>
 
       {/* Check ERC-1155 Balance Section */}
+      {/*
       <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
         Check ERC-1155 Balance
       </Typography>
@@ -433,17 +490,47 @@ export default function CallContract() {
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle1">Spending Conditions:</Typography>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {spendingConditions.map((cond, idx) => (
-                  <li key={cond.proofRequestId.toString()}>
-                    <b>ProofRequestID:</b> {cond.proofRequestId.toString()}<br/>
-                    <b>Attribute:</b> {cond.attribute} <b>Operator:</b> {cond.operatorStr} <b>Value:</b> {cond.value}
-                  </li>
-                ))}
+                {spendingConditions.map((cond, idx) => {
+                  // Translate operatorStr if possible
+                  let opLabel = cond.operatorStr;
+                  const operatorLabelMap = {
+                    '$eq': 'is equal to',
+                    '$ne': 'is not equal to',
+                    '$in': 'matches one of the values',
+                    '$nin': 'matches none of the values',
+                    '$lt': 'is less than',
+                    '$gt': 'is greater than',
+                  };
+                  if (operatorLabelMap[opLabel]) {
+                    opLabel = operatorLabelMap[opLabel];
+                  } else if ((opLabel || '').startsWith('$')) {
+                    opLabel = opLabel.substring(1);
+                  } else if (!opLabel) {
+                    opLabel = '';
+                  }
+                  // Determine prover role (sender/receiver)
+                  let proverRole = '';
+                  if (cond.role === 'sender' || cond.proverRole === 'sender') {
+                    proverRole = "Sender's";
+                  } else if (cond.role === 'receiver' || cond.proverRole === 'receiver') {
+                    proverRole = "Receiver's";
+                  } else {
+                    proverRole = '';
+                  }
+                  return (
+                    <li key={cond.proofRequestId.toString()}>
+                      <span>
+                        {proverRole} {cond.attribute} {opLabel} {cond.value}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </Box>
           )}
         </>
       )}
+      */}
 
       {/* Uncomment to enable transfer UI */}
       {/*
@@ -633,9 +720,34 @@ export default function CallContract() {
 
       {/* PM Contract Fields */}
       <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-        PM Contract Parameters
+        Select Token to Attach Spending Condition
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Choose a token you own (balance &gt; 0) to attach this spending condition.
       </Typography>
       <Stack direction="row" spacing={2} mt={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel id="owned-token-label">Token Name</InputLabel>
+          <Select
+            labelId="owned-token-label"
+            id="owned-token-select"
+            value={selectedTokenId}
+            label="Token Name"
+            onChange={e => setSelectedTokenId(e.target.value)}
+          >
+            {ownedTokens.length === 0 && (
+              <MenuItem value="" disabled>
+                No tokens with balance
+              </MenuItem>
+            )}
+            {ownedTokens.map(token => (
+              <MenuItem key={token.id} value={token.id}>
+                {token.name} (#{token.id})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        {/*
         <TextField
           label="TokenID"
           value={tokenID_addRequest}
@@ -643,6 +755,7 @@ export default function CallContract() {
           size="small"
           fullWidth
         />
+        */}
         {/*
         <TextField
           label="Proof Request ID"
@@ -652,13 +765,22 @@ export default function CallContract() {
           fullWidth
         />
         */}
-        <TextField
-          label="Prover's address"
-          value={proverAddress}
-          onChange={e => set_proverAddress(e.target.value)}
-          size="small"
-          fullWidth
-        />
+        <FormControl fullWidth size="small">
+          <InputLabel id="proof-role-label">Who is the prover?</InputLabel>
+          <Select
+            labelId="proof-role-label"
+            id="proof-role"
+            value={proverRole}
+            label="Who is the prover?"
+            onChange={e => setproverRole(e.target.value)}
+          >
+            <MenuItem value="" disabled>
+              Select prover
+            </MenuItem>
+            <MenuItem value="sender">sender</MenuItem>
+            <MenuItem value="receiver">receiver</MenuItem>
+          </Select>
+        </FormControl>
       </Stack>
 
       {/* Buttons */}
@@ -673,8 +795,8 @@ export default function CallContract() {
             !selectedOperator ||
             !filterValue ||
             !!error ||
-            !tokenID_addRequest ||
-            !proverAddress
+            !selectedTokenId ||
+            !proverRole
           }
         >
           Set Proof Request

@@ -38,6 +38,10 @@ export default function TokenList() {
   useEffect(() => {
     if (!staticContract || !account) return;
 
+    // Clear proof statuses and errors when account or contract changes
+    setProofStatuses({});
+    setErrors({});
+
     async function loadTokens() {
       setLoading(true);
       try {
@@ -64,17 +68,25 @@ export default function TokenList() {
         for (const id of ids) {
           try {
             const [scIds, scArr] = await staticContract.getSpendingConditions(id);
+            // Fetch roles for each spending condition
+            const roles = [];
+            for (let i = 0; i < scIds.length; i++) {
+              const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
+              roles.push(role);
+            }
             scs[id] = scIds.map((scId, idx) => {
               const cond = scArr[idx];
               // Support both named and indexed struct return
               const attribute = cond.attribute || cond[0] || '';
               const operatorStr = cond.operatorStr || cond[1] || '';
               const value = cond.value || cond[2] || '';
+              const role = roles[idx] || '';
               return {
                 proofRequestId: scId,
                 attribute,
                 operatorStr,
-                value
+                value,
+                role
               };
             });
           } catch {
@@ -101,6 +113,8 @@ export default function TokenList() {
   };
 
   const handleTransfer = async (id) => {
+    // Clear previous warning/error for this token
+    setErrors(prev => ({ ...prev, [id]: null }));
     if (!signerContract || !account) {
       setErrors(prev => ({ ...prev, [id]: 'Connect wallet first' }));
       return;
@@ -123,16 +137,22 @@ export default function TokenList() {
       // --- Build pairs and filter zero address ---
       const proofPairs = [];
       for (const pid of proofIds) {
-        const addr = await staticContract.tokenID_proofRequest_address(id, pid);
-        if (addr !== ethers.ZeroAddress) {
-          proofPairs.push({ requestId: pid.toString(), prover: addr });
+        const role = await staticContract.tokenID_proofRequest_role(id, pid);
+        if (role === 'sender' || role === 'receiver') {
+          proofPairs.push({ requestId: pid.toString(), role });
         }
       }
 
       // --- Call getProofStatus, getZKPRequest, and fetch URL for failures ---
       const statuses = proofPairs.map(pair => ({ ...pair, isVerified: false, zkpRequest: null, url: null }));
       for (let i = 0; i < proofPairs.length; i++) {
-        const { prover, requestId } = proofPairs[i];
+        const { role, requestId } = proofPairs[i];
+        let prover = null;
+        if (role === 'sender') {
+          prover = account;
+        } else if (role === 'receiver') {
+          prover = recipients[id] || '';
+        }
         // fetch proof verification status
         const statusData = await verifierContract.getProofStatus(prover, requestId);
         statuses[i].isVerified = statusData.isVerified;
@@ -223,12 +243,23 @@ export default function TokenList() {
                         } else if (!opLabel) {
                           opLabel = '';
                         }
+                        // Determine prover role (sender/receiver)
+                        let proverRole = '';
+                        if (cond.role === 'sender') {
+                          proverRole = "Sender's";
+                        } else if (cond.role === 'receiver') {
+                          proverRole = "Receiver's";
+                        } else {
+                          proverRole = '';
+                        }
                         return (
                           <li key={cond.proofRequestId.toString()} style={{ marginBottom: 8 }}>
                             <Typography variant="body2" sx={{ mb: 0 }}>
                               Proof request ID: {cond.proofRequestId.toString()}
                             </Typography>
-                            {cond.attribute} {opLabel} {cond.value}
+                            <Typography variant="body2" sx={{ mb: 0 }}>
+                              {proverRole} {cond.attribute} {opLabel} {cond.value}
+                            </Typography>
                           </li>
                         );
                       })}
@@ -265,9 +296,9 @@ export default function TokenList() {
                       Proof Statuses:
                     </Typography>
                     {proofStatuses[id].map(ps => (
-                      <Box key={`${ps.prover}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
+                      <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
                         <Typography variant="caption" display="block">
-                          Address: {ps.prover}
+                          Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
                         </Typography>
                         <Typography variant="caption" display="block">
                           Request ID: {ps.requestId}
