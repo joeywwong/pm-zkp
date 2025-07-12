@@ -35,6 +35,7 @@ const TokenList = forwardRef((props, ref) => {
   const [proofStatuses, setProofStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [transferring, setTransferring] = useState({});
+  const [removing, setRemoving] = useState({});
   const [tokenNames, setTokenNames] = useState({});
   const [spendingConditions, setSpendingConditions] = useState({});
 
@@ -368,6 +369,7 @@ const TokenList = forwardRef((props, ref) => {
                         <Typography variant="body2" sx={{ mb: 2 }}>Spending Conditions:</Typography>
                         <ul style={{ margin: 0, paddingLeft: 20 }}>
                           {spendingConditions[selectedTokenId].map((cond, idx) => {
+                            // ...existing code for rendering conditions and remove button...
                             let opLabel = cond.operatorStr;
                             if (operatorLabelMap[opLabel]) {
                               opLabel = operatorLabelMap[opLabel];
@@ -405,6 +407,7 @@ const TokenList = forwardRef((props, ref) => {
                                       alert('Connect wallet and load contract first');
                                       return;
                                     }
+                                    setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
                                     try {
                                       // Only admin can remove
                                       const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
@@ -435,17 +438,25 @@ const TokenList = forwardRef((props, ref) => {
                                       } catch {}
                                     } catch (err) {
                                       alert('Failed to remove spending condition: ' + (err.reason || err.message));
+                                    } finally {
+                                      setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
                                     }
                                   }}
+                                  startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
+                                  disabled={removing[cond.proofRequestId]}
                                 >
-                                  Remove
+                                  {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
                                 </Button>
                               </li>
                             );
                           })}
                         </ul>
                       </>
-                    ) : null}
+                    ) : (
+                      <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
+                        No spending conditions set for this token.
+                      </Typography>
+                    )}
                   </Box>
                   <Stack spacing={2}>
                     <TextField
