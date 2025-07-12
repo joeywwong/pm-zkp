@@ -42,8 +42,9 @@ PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract
 - [x] Combine 'mint new token' and 'mint existing token'
 - [x] Let user choose who must submit proof (sender / receiver) via dropdown, instead of manually entering a prover address
-- [ ] Update token balances after minting token
-- [ ] Reminder after transaction success
+- [x] Update token balances after minting token
+- [x] Update spending conditions on list of money after setting it
+- [ ] Reminder after successful money transfer
 - [x] Show spending conditions above transfer button, e.g. birthday before 20250101
 - [x] Show token names over ID
 

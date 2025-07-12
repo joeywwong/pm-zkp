@@ -20,9 +20,10 @@ import {
   Paper,
   Link,
   Stack,
+  Autocomplete,
 } from '@mui/material';
 
-export default function CallContract() {
+export default function CallContract({ tokenListRef }) {
   const { staticContract, signerContract, signerVerifierContract } = useContract();
   const { account } = useMetaMask();
 
@@ -218,6 +219,35 @@ export default function CallContract() {
   const [mintTokenName, setMintTokenName] = useState('');
   const [mintAmount, setMintAmount] = useState('');
   const [isMinting, setIsMinting] = useState(false);
+  const [allTokenNames, setAllTokenNames] = useState([]);
+
+  // Fetch all token names for mint dropdown
+  const fetchTokenNames = async () => {
+    if (!staticContract) {
+      setAllTokenNames([]);
+      return;
+    }
+    try {
+      const idsBig = await staticContract.allTokenIDs();
+      const ids = Array.isArray(idsBig) ? idsBig.map(id => id.toString()) : [];
+      const names = [];
+      for (const id of ids) {
+        try {
+          const name = await staticContract.tokenName(id);
+          names.push(name);
+        } catch {
+          names.push(`Token #${id}`);
+        }
+      }
+      setAllTokenNames(names);
+    } catch {
+      setAllTokenNames([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchTokenNames();
+  }, [staticContract]);
 
   // Mint Token handler (uses contract's mintToken logic)
   const mintToken = async () => {
@@ -235,6 +265,16 @@ export default function CallContract() {
       );
       await tx.wait();
       alert('Token minted!');
+      // Refresh TokenList after mint
+      if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokens === 'function') {
+        tokenListRef.current.refreshTokens();
+      }
+      // Refresh token name dropdown
+      await fetchTokenNames();
+      // Refresh owned tokens for proof request dropdown
+      if (typeof fetchOwnedTokens === 'function') {
+        await fetchOwnedTokens();
+      }
     } catch (err) {
       alert('Mint failed: ' + (err.reason || err.message));
     } finally {
@@ -338,6 +378,9 @@ export default function CallContract() {
           if (receipt.status === 1) {
             setVerifierTxStatus('Confirmed');
             // Refresh spending conditions for this token
+            if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokens === 'function') {
+              tokenListRef.current.refreshTokens();
+            }
             if (tokenId) {
               try {
                 const [ids, conditions] = await staticContract.getSpendingConditions(tokenId);
@@ -365,58 +408,58 @@ export default function CallContract() {
   const [ownedTokens, setOwnedTokens] = useState([]);
   const [selectedTokenId, setSelectedTokenId] = useState('');
 
-  // Fetch tokens with nonzero balance for dropdown
-  useEffect(() => {
-    async function fetchOwnedTokens() {
-      if (!staticContract || !account) {
+  // Move fetchOwnedTokens to component scope
+  const fetchOwnedTokens = async () => {
+    if (!staticContract || !account) {
+      setOwnedTokens([]);
+      setSelectedTokenId('');
+      return;
+    }
+    try {
+      // Get all token IDs as array of BigNumbers
+      const idsBig = await staticContract.allTokenIDs();
+      const ids = Array.isArray(idsBig) ? idsBig.map(id => id.toString()) : [];
+      if (ids.length === 0) {
         setOwnedTokens([]);
         setSelectedTokenId('');
         return;
       }
-      try {
-        // Get all token IDs as array of BigNumbers
-        const idsBig = await staticContract.allTokenIDs();
-        const ids = Array.isArray(idsBig) ? idsBig.map(id => id.toString()) : [];
-        if (ids.length === 0) {
-          setOwnedTokens([]);
-          setSelectedTokenId('');
-          return;
+      // Prepare batch for balanceOfBatch
+      const accountsArray = ids.map(() => account);
+      // balanceOfBatch expects [accounts], [ids] as arrays of same length
+      const balancesBig = await staticContract.balanceOfBatch(accountsArray, ids);
+      // Convert balances to string
+      const balances = Array.isArray(balancesBig) ? balancesBig.map(b => b.toString()) : [];
+      // Get token names
+      const names = {};
+      for (const id of ids) {
+        try {
+          names[id] = await staticContract.tokenName(id);
+        } catch {
+          names[id] = `Token #${id}`;
         }
-        // Prepare batch for balanceOfBatch
-        const accountsArray = ids.map(() => account);
-        // balanceOfBatch expects [accounts], [ids] as arrays of same length
-        const balancesBig = await staticContract.balanceOfBatch(accountsArray, ids);
-        // Convert balances to string
-        const balances = Array.isArray(balancesBig) ? balancesBig.map(b => b.toString()) : [];
-        // Get token names
-        const names = {};
-        for (const id of ids) {
-          try {
-            names[id] = await staticContract.tokenName(id);
-          } catch {
-            names[id] = `Token #${id}`;
-          }
-        }
-        // Only include tokens with nonzero balance
-        const owned = ids
-          .map((id, idx) => ({ id, name: names[id] || `Token #${id}`, balance: balances[idx] }))
-          .filter(t => t.balance && t.balance !== '0');
-        setOwnedTokens(owned);
-        // Always reset selectedTokenId if the new account does not own the previously selected token
-        if (!owned.some(t => t.id === selectedTokenId)) {
-          setSelectedTokenId(owned.length > 0 ? owned[0].id : '');
-        }
-      } catch (err) {
-        setOwnedTokens([]);
-        setSelectedTokenId('');
       }
+      // Only include tokens with nonzero balance
+      const owned = ids
+        .map((id, idx) => ({ id, name: names[id] || `Token #${id}`, balance: balances[idx] }))
+        .filter(t => t.balance && t.balance !== '0');
+      setOwnedTokens(owned);
+      // Always reset selectedTokenId if the new account does not own the previously selected token
+      if (!owned.some(t => t.id === selectedTokenId)) {
+        setSelectedTokenId(owned.length > 0 ? owned[0].id : '');
+      }
+    } catch (err) {
+      setOwnedTokens([]);
+      setSelectedTokenId('');
     }
+  };
+  useEffect(() => {
     fetchOwnedTokens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staticContract, account]);
 
   return (
-    <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>
+    <Paper elevation={3} sx={{ p: 3, maxWidth: 800, mx: 'auto', mt: 4 }}>
       {/* Mint Token Section (single form) */}
       <Typography variant="h5" gutterBottom>
         Mint Token
@@ -427,14 +470,50 @@ export default function CallContract() {
           value={mintRecipient}
           onChange={e => setMintRecipient(e.target.value)}
           size="small"
-          fullWidth
+          sx={{ minWidth: 120, flex: 1 }}
         />
-        <TextField
-          label="Token Name"
+        <Autocomplete
+          freeSolo
+          options={allTokenNames}
           value={mintTokenName}
-          onChange={e => setMintTokenName(e.target.value)}
-          size="small"
-          fullWidth
+          onChange={(e, newValue) => setMintTokenName(newValue || '')}
+          onInputChange={(e, newInputValue) => setMintTokenName(newInputValue)}
+          renderInput={(params) => {
+            // Show triangle (dropdown arrow) at right if no input, show clear icon if there is input
+            const showTriangle = !mintTokenName;
+            const showClear = !!mintTokenName;
+            // To ensure the triangle is at the rightmost position, use absolute positioning over the input box when empty
+            return (
+              <Box sx={{ position: 'relative', width: '100%' }}>
+                <TextField
+                  {...params}
+                  label="Token Name"
+                  size="small"
+                  sx={{ minWidth: 420, flex: 3.5 }}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: null,
+                    endAdornment: showClear ? params.InputProps.endAdornment : null,
+                  }}
+                  placeholder="Select from list or enter a new token name"
+                />
+                {showTriangle && (
+                  <Box sx={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }}>
+                    <svg
+                      width={18}
+                      height={18}
+                      viewBox="0 0 24 24"
+                      style={{ color: '#888' }}
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M7 10l5 5 5-5z" />
+                    </svg>
+                  </Box>
+                )}
+              </Box>
+            );
+          }}
         />
         <TextField
           label="Amount"
@@ -442,7 +521,7 @@ export default function CallContract() {
           value={mintAmount}
           onChange={e => setMintAmount(e.target.value)}
           size="small"
-          fullWidth
+          sx={{ minWidth: 80, maxWidth: 120, flex: 0.7 }}
         />
       </Stack>
       <Box mt={2}>
@@ -838,7 +917,7 @@ export default function CallContract() {
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#fffde7' }}>
           {verifierTxHash && (
             <Typography variant="body2">
-              <strong>Verifier Tx Hash:</strong>{' '}
+              <strong>Tx Hash:</strong>{' '}
               <Link
                 href={`https://amoy.polygonscan.com/tx/${verifierTxHash}`}
                 target="_blank"
@@ -851,12 +930,12 @@ export default function CallContract() {
           )}
           {verifierTxStatus && (
             <Typography variant="body2">
-              <strong>Verifier Status:</strong> {verifierTxStatus}
+              <strong>Status:</strong> {verifierTxStatus}
             </Typography>
           )}
           {verifierTxError && (
             <Typography color="error" variant="body2">
-              <strong>Verifier Error:</strong> {verifierTxError}
+              <strong>Error:</strong> {verifierTxError}
             </Typography>
           )}
         </Paper>
@@ -866,7 +945,7 @@ export default function CallContract() {
       {requestResult && (
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#e8f5e9' }}>
           <Typography variant="body2">
-            <strong>Request Result:</strong> {requestResult}
+            <strong>{requestResult}</strong>
           </Typography>
         </Paper>
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { useContract } from '../hooks/useContract';
 import { useMetaMask } from '../hooks/useMetaMask';
 import { ethers } from 'ethers'; // using ethers.ZeroAddress
@@ -21,7 +21,7 @@ import {
   Divider,
 } from '@mui/material';
 
-export default function TokenList() {
+const TokenList = forwardRef((props, ref) => {
   const { staticContract, signerContract, verifierContract } = useContract();
   const { account } = useMetaMask();
   const [tokenIds, setTokenIds] = useState([]);
@@ -35,72 +35,76 @@ export default function TokenList() {
   const [tokenNames, setTokenNames] = useState({});
   const [spendingConditions, setSpendingConditions] = useState({});
 
-  useEffect(() => {
+  // Expose refreshTokens via ref
+  async function loadTokens() {
     if (!staticContract || !account) return;
-
-    // Clear proof statuses and errors when account or contract changes
     setProofStatuses({});
     setErrors({});
+    setLoading(true);
+    try {
+      // 1. Fetch all token IDs
+      const idsBig = await staticContract.allTokenIDs();
+      const idsBigArray = [...idsBig];
+      const ids = idsBigArray.map(id => id.toString());
+      setTokenIds(ids);
 
-    async function loadTokens() {
-      setLoading(true);
-      try {
-        // 1. Fetch all token IDs
-        const idsBig = await staticContract.allTokenIDs();
-        const idsBigArray = [...idsBig];
-        const ids = idsBigArray.map(id => id.toString());
-        setTokenIds(ids);
+      // 2. Fetch balances in batch
+      const accountsArray = idsBigArray.map(() => account);
+      const balancesBig = await staticContract.balanceOfBatch(accountsArray, idsBigArray);
+      setBalances(balancesBig.map(b => b.toString()));
 
-        // 2. Fetch balances in batch
-        const accountsArray = idsBigArray.map(() => account);
-        const balancesBig = await staticContract.balanceOfBatch(accountsArray, idsBigArray);
-        setBalances(balancesBig.map(b => b.toString()));
-
-        // 3. Fetch token names in batch
-        const names = {};
-        for (const id of ids) {
-          names[id] = await staticContract.tokenName(id);
-        }
-        setTokenNames(names);
-
-        // 4. Fetch spending conditions for each token
-        const scs = {};
-        for (const id of ids) {
-          try {
-            const [scIds, scArr] = await staticContract.getSpendingConditions(id);
-            // Fetch roles for each spending condition
-            const roles = [];
-            for (let i = 0; i < scIds.length; i++) {
-              const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
-              roles.push(role);
-            }
-            scs[id] = scIds.map((scId, idx) => {
-              const cond = scArr[idx];
-              // Support both named and indexed struct return
-              const attribute = cond.attribute || cond[0] || '';
-              const operatorStr = cond.operatorStr || cond[1] || '';
-              const value = cond.value || cond[2] || '';
-              const role = roles[idx] || '';
-              return {
-                proofRequestId: scId,
-                attribute,
-                operatorStr,
-                value,
-                role
-              };
-            });
-          } catch {
-            scs[id] = [];
-          }
-        }
-        setSpendingConditions(scs);
-      } catch (err) {
-        console.error('TokenList load error:', err);
-      } finally {
-        setLoading(false);
+      // 3. Fetch token names in batch
+      const names = {};
+      for (const id of ids) {
+        names[id] = await staticContract.tokenName(id);
       }
-    }
+      setTokenNames(names);
 
+      // 4. Fetch spending conditions for each token
+      const scs = {};
+      for (const id of ids) {
+        try {
+          const [scIds, scArr] = await staticContract.getSpendingConditions(id);
+          // Fetch roles for each spending condition
+          const roles = [];
+          for (let i = 0; i < scIds.length; i++) {
+            const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
+            roles.push(role);
+          }
+          scs[id] = scIds.map((scId, idx) => {
+            const cond = scArr[idx];
+            // Support both named and indexed struct return
+            const attribute = cond.attribute || cond[0] || '';
+            const operatorStr = cond.operatorStr || cond[1] || '';
+            const value = cond.value || cond[2] || '';
+            const role = roles[idx] || '';
+            return {
+              proofRequestId: scId,
+              attribute,
+              operatorStr,
+              value,
+              role
+            };
+          });
+        } catch {
+          scs[id] = [];
+        }
+      }
+      setSpendingConditions(scs);
+    } catch (err) {
+      console.error('TokenList load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Expose refreshTokens method to parent component
+  // This allows parent components to trigger a refresh of the token list
+  useImperativeHandle(ref, () => ({
+    refreshTokens: loadTokens
+  }));
+
+  useEffect(() => {
     loadTokens();
   }, [staticContract, account]);
 
@@ -385,4 +389,6 @@ export default function TokenList() {
       </Grid>
     </Box>
   );
-}
+});
+
+export default TokenList;

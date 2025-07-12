@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useMetaMask } from './hooks/useMetaMask';
 import CallContract from './components/CallContract';
 import TokenList from './components/TokenList';
@@ -11,6 +11,9 @@ function App() {
   const { account, connect } = useMetaMask();
   const { staticContract } = useContract();
   const address_string = account && typeof account === 'object' ? account.address : account;
+
+  // Create a ref for TokenList
+  const tokenListRef = useRef();
 
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh' }}>
@@ -32,10 +35,10 @@ function App() {
       </AppBar>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-          <TokenList />
+          <TokenList ref={tokenListRef} />
         </Paper>
         <Paper elevation={2} sx={{ p: 3 }}>
-          <CallContract />
+          <CallContract tokenListRef={tokenListRef} />
         </Paper>
       </Container>
     </Box>
