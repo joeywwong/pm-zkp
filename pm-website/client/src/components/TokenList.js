@@ -98,10 +98,101 @@ const TokenList = forwardRef((props, ref) => {
     }
   }
 
-  // Expose refreshTokens method to parent component
-  // This allows parent components to trigger a refresh of the token list
+  // Expose refreshTokens and per-token refresh methods to parent component
+  // This allows parent components to trigger a refresh of the token list or individual tokens
+  const refreshTokenSpendingConditions = async (tokenId) => {
+    if (!staticContract) return;
+    try {
+      const [scIds, scArr] = await staticContract.getSpendingConditions(tokenId);
+      // Fetch roles for each spending condition
+      const roles = [];
+      for (let i = 0; i < scIds.length; i++) {
+        const role = await staticContract.tokenID_proofRequest_role(tokenId, scIds[i]);
+        roles.push(role);
+      }
+      const updated = scIds.map((scId, idx) => {
+        const c = scArr[idx];
+        const attribute = c.attribute || c[0] || '';
+        const operatorStr = c.operatorStr || c[1] || '';
+        const value = c.value || c[2] || '';
+        const role = roles[idx] || '';
+        return {
+          proofRequestId: scId,
+          attribute,
+          operatorStr,
+          value,
+          role
+        };
+      });
+      setSpendingConditions(prev => ({ ...prev, [tokenId]: updated }));
+    } catch {}
+  };
+
+  const refreshTokenBalance = async (tokenId) => {
+    if (!staticContract || !account) return;
+    try {
+      const newBal = await staticContract.balanceOf(account, tokenId);
+      setBalances(prev => {
+        const idx = tokenIds.indexOf(tokenId);
+        if (idx === -1) return prev;
+        return prev.map((b, i) => (i === idx ? newBal.toString() : b));
+      });
+    } catch {}
+  };
+
+  // Add a method to append a new token to the list
+  const addNewToken = async (tokenId) => {
+    if (!staticContract || !account) return;
+    try {
+      // Fetch balance
+      const bal = await staticContract.balanceOf(account, tokenId);
+      // Fetch name
+      let name = '';
+      try {
+        name = await staticContract.tokenName(tokenId);
+      } catch {}
+      // Fetch spending conditions
+      let scArr = [];
+      try {
+        const [scIds, scStructArr] = await staticContract.getSpendingConditions(tokenId);
+        // Fetch roles for each spending condition
+        const roles = [];
+        for (let i = 0; i < scIds.length; i++) {
+          const role = await staticContract.tokenID_proofRequest_role(tokenId, scIds[i]);
+          roles.push(role);
+        }
+        scArr = scIds.map((scId, idx) => {
+          const c = scStructArr[idx];
+          const attribute = c.attribute || c[0] || '';
+          const operatorStr = c.operatorStr || c[1] || '';
+          const value = c.value || c[2] || '';
+          const role = roles[idx] || '';
+          return {
+            proofRequestId: scId,
+            attribute,
+            operatorStr,
+            value,
+            role
+          };
+        });
+      } catch {}
+      // Append to state arrays
+      setTokenIds(prev => prev.includes(tokenId) ? prev : [...prev, tokenId]);
+      setBalances(prev => {
+        if (tokenIds.includes(tokenId)) return prev;
+        return [...prev, bal.toString()];
+      });
+      setTokenNames(prev => ({ ...prev, [tokenId]: name }));
+      setSpendingConditions(prev => ({ ...prev, [tokenId]: scArr }));
+    } catch {}
+  };
+
   useImperativeHandle(ref, () => ({
-    refreshTokens: loadTokens
+    refreshTokens: loadTokens,
+    refreshTokenSpendingConditions,
+    refreshTokenBalance,
+    addNewToken,
+    hasToken: (tokenId) => tokenIds.includes(tokenId)
   }));
 
   useEffect(() => {

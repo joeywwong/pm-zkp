@@ -265,9 +265,39 @@ export default function CallContract({ tokenListRef }) {
       );
       await tx.wait();
       alert('Token minted!');
-      // Refresh TokenList after mint
-      if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokens === 'function') {
-        tokenListRef.current.refreshTokens();
+      // Add new token to TokenList if not present, otherwise refresh balance
+      if (tokenListRef && tokenListRef.current) {
+        let mintedTokenId = null;
+        let tokenExists = false;
+        if (staticContract) {
+          const idsBig = await staticContract.allTokenIDs();
+          const ids = Array.isArray(idsBig) ? idsBig.map(id => id.toString()) : [];
+          for (const id of ids) {
+            try {
+              const name = await staticContract.tokenName(id);
+              if (name === mintTokenName) {
+                mintedTokenId = id;
+                // Check if token already exists in TokenList
+                if (typeof tokenListRef.current.hasToken === 'function') {
+                  tokenExists = await tokenListRef.current.hasToken(mintedTokenId);
+                }
+                break;
+              }
+            } catch {}
+          }
+        }
+        if (mintedTokenId) {
+          if (tokenExists && typeof tokenListRef.current.refreshTokenBalance === 'function') {
+            await tokenListRef.current.refreshTokenBalance(mintedTokenId);
+          } else if (!tokenExists && typeof tokenListRef.current.addNewToken === 'function') {
+            await tokenListRef.current.addNewToken(mintedTokenId);
+          }
+        } else {
+          // fallback: refresh all tokens if not found
+          if (typeof tokenListRef.current.refreshTokens === 'function') {
+            tokenListRef.current.refreshTokens();
+          }
+        }
       }
       // Refresh token name dropdown
       await fetchTokenNames();
@@ -377,9 +407,9 @@ export default function CallContract({ tokenListRef }) {
           const receipt = await tx.wait();
           if (receipt.status === 1) {
             setVerifierTxStatus('Confirmed');
-            // Refresh spending conditions for this token
-            if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokens === 'function') {
-              tokenListRef.current.refreshTokens();
+            // Refresh spending conditions for this token only
+            if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokenSpendingConditions === 'function') {
+              tokenListRef.current.refreshTokenSpendingConditions(tokenId);
             }
             if (tokenId) {
               try {
