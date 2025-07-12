@@ -19,9 +19,12 @@ import {
   Link,
   Stack,
   Divider,
+  Modal,
+  Grow,
 } from '@mui/material';
 
 const TokenList = forwardRef((props, ref) => {
+  const [selectedTokenId, setSelectedTokenId] = useState(null);
   const { staticContract, signerContract, verifierContract } = useContract();
   const { account } = useMetaMask();
   const [tokenIds, setTokenIds] = useState([]);
@@ -215,6 +218,7 @@ const TokenList = forwardRef((props, ref) => {
       return;
     }
     setTransferring(prev => ({ ...prev, [id]: true }));
+    let proofNotVerified = false;
     try {
       // --- Fetch all proofRequestIDs ---
       const proofIds = [];
@@ -257,6 +261,7 @@ const TokenList = forwardRef((props, ref) => {
         // if not verified, get URL from helper
         if (!statuses[i].isVerified) {
           statuses[i].url = await getUrlFromZkpRequest(zkpRequest);
+          proofNotVerified = true;
         }
       }
       setProofStatuses(prev => ({ ...prev, [id]: statuses }));
@@ -280,8 +285,14 @@ const TokenList = forwardRef((props, ref) => {
       );
       setErrors(prev => ({ ...prev, [id]: null }));
     } catch (err) {
-      const msg = err.reason || err.errorArgs?.[1] || err.message;
-      setErrors(prev => ({ ...prev, [id]: msg }));
+      // If any proof is not verified, show spending condition error
+      if (proofNotVerified) {
+        setErrors(prev => ({ ...prev, [id]: 'Spending condition not verified.' }));
+      } else {
+        // Otherwise, show short error message
+        const msg = err.reason || err.errorArgs?.[1] || err.message;
+        setErrors(prev => ({ ...prev, [id]: msg ? String(msg).split('\n')[0] : 'Transfer failed.' }));
+      }
     } finally {
       setTransferring(prev => ({ ...prev, [id]: false }));
     }
@@ -306,179 +317,215 @@ const TokenList = forwardRef((props, ref) => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, mt: 2 }}>
-      <Typography variant="h5" gutterBottom align="center">
-        List of Programmable Money
-      </Typography>
-      <Grid container spacing={3}>
-        {tokenIds.map(id => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={id}>
-            <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Typography variant="h6" gutterBottom>
-                  {tokenNames[id] || 'Unnamed Token'}
-                </Typography>
-                <Typography variant="subtitle1" gutterBottom>
-                  Token #{id}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Balance: <b>{balances[tokenIds.indexOf(id)] || '0'}</b>
-                </Typography>
-                {spendingConditions[id] && spendingConditions[id].length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 2 }}>Spending Conditions:</Typography>
-                    <ul style={{ margin: 0, paddingLeft: 20 }}>
-                      {spendingConditions[id].map((cond, idx) => {
-                        // Translate operatorStr if possible
-                        let opLabel = cond.operatorStr;
-                        if (operatorLabelMap[opLabel]) {
-                          opLabel = operatorLabelMap[opLabel];
-                        } else if ((opLabel || '').startsWith('$')) {
-                          opLabel = opLabel.substring(1);
-                        } else if (!opLabel) {
-                          opLabel = '';
-                        }
-                        // Determine prover role (sender/receiver)
-                        let proverRole = '';
-                        if (cond.role === 'sender') {
-                          proverRole = "Sender's";
-                        } else if (cond.role === 'receiver') {
-                          proverRole = "Receiver's";
-                        } else {
-                          proverRole = '';
-                        }
-                        return (
-                          <li key={cond.proofRequestId.toString()} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                            <div style={{ flex: 1 }}>
-                              <Typography variant="body2" sx={{ mb: 0 }}>
-                                Proof request ID: {cond.proofRequestId.toString()}
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 0 }}>
-                                {proverRole} {cond.attribute} {opLabel} {cond.value}
-                              </Typography>
-                            </div>
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              size="small"
-                              sx={{ ml: 2 }}
-                              onClick={async () => {
-                                if (!signerContract || !account) {
-                                  alert('Connect wallet and load contract first');
-                                  return;
-                                }
-                                try {
-                                  // Only admin can remove
-                                  const tx = await signerContract.deleteProofRequestAndRole(id, cond.proofRequestId);
-                                  await tx.wait();
-                                  // Refresh spending conditions for this token
-                                  try {
-                                    const [scIds, scArr] = await staticContract.getSpendingConditions(id);
-                                    // Fetch roles for each spending condition
-                                    const roles = [];
-                                    for (let i = 0; i < scIds.length; i++) {
-                                      const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
-                                      roles.push(role);
+    <>
+      <Box sx={{ flexGrow: 1, mt: 2 }}>
+        <Typography variant="h5" gutterBottom align="center">
+          List of Programmable Money
+        </Typography>
+        <Grid container spacing={3} justifyContent="flex-start">
+          {tokenIds.map(id => (
+            <Grid item key={id}>
+              <Card elevation={3} sx={{ width: 320, height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
+                onClick={() => setSelectedTokenId(id)}>
+                <CardContent sx={{ flexGrow: 1, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                  <Typography variant="h6" gutterBottom>
+                    {tokenNames[id] || 'Unnamed Token'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Balance: <b>{balances[tokenIds.indexOf(id)] || '0'}</b>
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      {/* Modal for enlarged card */}
+      <Modal
+        open={!!selectedTokenId}
+        onClose={() => setSelectedTokenId(null)}
+        closeAfterTransition
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Grow in={!!selectedTokenId} timeout={300}>
+          <Box sx={{ outline: 'none' }}>
+            {selectedTokenId && (
+              <Card elevation={6} sx={{ width: 420, maxWidth: '90vw', minHeight: 420, p: 2, display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h5" gutterBottom>
+                    {tokenNames[selectedTokenId] || 'Unnamed Token'}
+                  </Typography>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Token #{selectedTokenId}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
+                  </Typography>
+                  <Box sx={{ mb: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                    {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
+                      <>
+                        <Typography variant="body2" sx={{ mb: 2 }}>Spending Conditions:</Typography>
+                        <ul style={{ margin: 0, paddingLeft: 20 }}>
+                          {spendingConditions[selectedTokenId].map((cond, idx) => {
+                            let opLabel = cond.operatorStr;
+                            if (operatorLabelMap[opLabel]) {
+                              opLabel = operatorLabelMap[opLabel];
+                            } else if ((opLabel || '').startsWith('$')) {
+                              opLabel = opLabel.substring(1);
+                            } else if (!opLabel) {
+                              opLabel = '';
+                            }
+                            let proverRole = '';
+                            if (cond.role === 'sender') {
+                              proverRole = "Sender's";
+                            } else if (cond.role === 'receiver') {
+                              proverRole = "Receiver's";
+                            } else {
+                              proverRole = '';
+                            }
+                            return (
+                              <li key={cond.proofRequestId.toString()} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                <div style={{ flex: 1 }}>
+                                  <Typography variant="body2" sx={{ mb: 0 }}>
+                                    Proof request ID: {cond.proofRequestId.toString()}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ mb: 0 }}>
+                                    {proverRole} {cond.attribute} {opLabel} {cond.value}
+                                  </Typography>
+                                </div>
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  sx={{ ml: 2 }}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!signerContract || !account) {
+                                      alert('Connect wallet and load contract first');
+                                      return;
                                     }
-                                    const updated = scIds.map((scId, idx) => {
-                                      const c = scArr[idx];
-                                      const attribute = c.attribute || c[0] || '';
-                                      const operatorStr = c.operatorStr || c[1] || '';
-                                      const value = c.value || c[2] || '';
-                                      const role = roles[idx] || '';
-                                      return {
-                                        proofRequestId: scId,
-                                        attribute,
-                                        operatorStr,
-                                        value,
-                                        role
-                                      };
-                                    });
-                                    setSpendingConditions(prev => ({ ...prev, [id]: updated }));
-                                  } catch {}
-                                } catch (err) {
-                                  alert('Failed to remove spending condition: ' + (err.reason || err.message));
-                                }
-                              }}
-                            >
-                              Remove
-                            </Button>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                                    try {
+                                      // Only admin can remove
+                                      const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
+                                      await tx.wait();
+                                      // Refresh spending conditions for this token
+                                      try {
+                                        const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId);
+                                        const roles = [];
+                                        for (let i = 0; i < scIds.length; i++) {
+                                          const role = await staticContract.tokenID_proofRequest_role(selectedTokenId, scIds[i]);
+                                          roles.push(role);
+                                        }
+                                        const updated = scIds.map((scId, idx) => {
+                                          const c = scArr[idx];
+                                          const attribute = c.attribute || c[0] || '';
+                                          const operatorStr = c.operatorStr || c[1] || '';
+                                          const value = c.value || c[2] || '';
+                                          const role = roles[idx] || '';
+                                          return {
+                                            proofRequestId: scId,
+                                            attribute,
+                                            operatorStr,
+                                            value,
+                                            role
+                                          };
+                                        });
+                                        setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
+                                      } catch {}
+                                    } catch (err) {
+                                      alert('Failed to remove spending condition: ' + (err.reason || err.message));
+                                    }
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </>
+                    ) : null}
                   </Box>
-                )}
-                <Stack spacing={2}>
-                  <TextField
-                    label="Recipient Address"
-                    value={recipients[id] || ''}
-                    onChange={e => handleRecipientChange(id, e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-                  <TextField
-                    label="Amount"
-                    type="number"
-                    inputProps={{ min: 0 }}
-                    value={amounts[id] || ''}
-                    onChange={e => handleAmountChange(id, e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-                </Stack>
-                {errors[id] && (
-                  <Alert severity="error" sx={{ mt: 2 }}>
-                    {errors[id]}
-                  </Alert>
-                )}
-                {proofStatuses[id] && (
-                  <Box mt={2}>
-                    <Divider sx={{ mb: 1 }} />
-                    <Typography variant="subtitle2" gutterBottom>
-                      Proof Statuses:
-                    </Typography>
-                    {proofStatuses[id].map(ps => (
-                      <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
-                        <Typography variant="caption" display="block">
-                          Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Request ID: {ps.requestId}
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Verified: {ps.isVerified ? 'Yes' : 'No'}
-                        </Typography>
-                        {!ps.isVerified && ps.url && (
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Recipient Address"
+                      value={recipients[selectedTokenId] || ''}
+                      onChange={e => handleRecipientChange(selectedTokenId, e.target.value)}
+                      size="small"
+                      fullWidth
+                    />
+                    <TextField
+                      label="Amount"
+                      type="number"
+                      inputProps={{ min: 0 }}
+                      value={amounts[selectedTokenId] || ''}
+                      onChange={e => handleAmountChange(selectedTokenId, e.target.value)}
+                      size="small"
+                      fullWidth
+                    />
+                  </Stack>
+                  {errors[selectedTokenId] && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      {errors[selectedTokenId]}
+                    </Alert>
+                  )}
+                  {proofStatuses[selectedTokenId] && (
+                    <Box mt={2}>
+                      <Divider sx={{ mb: 1 }} />
+                      <Typography variant="subtitle2" gutterBottom>
+                        Proof Statuses:
+                      </Typography>
+                      {proofStatuses[selectedTokenId].map(ps => (
+                        <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
                           <Typography variant="caption" display="block">
-                            URL:{' '}
-                            <Link href={ps.url} target="_blank" rel="noopener noreferrer">
-                              {ps.url}
-                            </Link>
+                            Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
                           </Typography>
-                        )}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </CardContent>
-              <CardActions>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  onClick={() => handleTransfer(id)}
-                  disabled={transferring[id]}
-                  startIcon={transferring[id] && <CircularProgress size={18} />}
-                >
-                  {transferring[id] ? 'Transferring...' : 'Transfer'}
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
+                          <Typography variant="caption" display="block">
+                            Request ID: {ps.requestId}
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            Verified: {ps.isVerified ? 'Yes' : 'No'}
+                          </Typography>
+                          {!ps.isVerified && ps.url && (
+                            <Typography variant="caption" display="block">
+                              URL:{' '}
+                              <Link href={ps.url} target="_blank" rel="noopener noreferrer">
+                                {ps.url}
+                              </Link>
+                            </Typography>
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </CardContent>
+                <CardActions>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={e => { e.stopPropagation(); handleTransfer(selectedTokenId); }}
+                    disabled={transferring[selectedTokenId]}
+                    startIcon={transferring[selectedTokenId] && <CircularProgress size={18} />}
+                  >
+                    {transferring[selectedTokenId] ? 'Transferring...' : 'Transfer'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    fullWidth
+                    onClick={() => setSelectedTokenId(null)}
+                  >
+                    Close
+                  </Button>
+                </CardActions>
+              </Card>
+            )}
+          </Box>
+        </Grow>
+      </Modal>
+    </>
   );
 });
 
