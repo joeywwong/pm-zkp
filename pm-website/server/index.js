@@ -3,9 +3,12 @@ const { exec, execFile} = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const PORT = process.env.PORT || 5000;
 //const { prepareRequestParams } = require('./iden3_repo/dist/prepareRequestParams');
+
+const db = new sqlite3.Database(path.join(__dirname, 'tx_metrics.db'));
 
 app.use(cors());
 app.use(express.json());
@@ -54,6 +57,25 @@ app.post("/api/requestPayload", async (req, res) => {
       res.json({ output: stdout });
     }
   });
+});
+
+function logFee({ operation_name, tx_hash, runtime, gas_fee }) {
+  db.run(
+    'INSERT INTO tx_logs (operation_name, tx_hash, runtime, gas_fee) VALUES (?, ?, ?, ?)',
+    [operation_name, tx_hash, runtime, gas_fee],
+    function(err) {
+      if (err) console.error('DB log error:', err);
+    }
+  );
+}
+
+app.post('/api/logTx', (req, res) => {
+  const { operation_name, tx_hash, runtime, gas_fee } = req.body;
+  if (!operation_name || !tx_hash) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  logFee({ operation_name, tx_hash, runtime, gas_fee });
+  res.json({ status: 'logged' });
 });
 
 app.listen(PORT, () => {
