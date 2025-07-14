@@ -320,12 +320,14 @@ export default function CallContract({ tokenListRef }) {
   const [verifierTxHash, setVerifierTxHash] = useState('');
   const [verifierTxStatus, setVerifierTxStatus] = useState('');
   const [verifierTxError, setVerifierTxError] = useState('');
+  const [isSettingSpendingCondition, setIsSettingSpendingCondition] = useState(false);
 
   const handleSetProofRequest = async () => {
     setVerifierTxHash('');
     setVerifierTxStatus('');
     setVerifierTxError('');
     setRequestResult('');
+    setIsSettingSpendingCondition(true);
 
     // Log the React state variable attributeType
     console.log('[React state] attributeType:', attributeType);
@@ -341,6 +343,7 @@ export default function CallContract({ tokenListRef }) {
 
     if (!jsonLD || !selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !jsonLdUrl) {
       alert('Please fill in all required fields.');
+      setIsSettingSpendingCondition(false);
       return;
     }
     try {
@@ -431,6 +434,8 @@ export default function CallContract({ tokenListRef }) {
       }
     } catch (err) {
       setRequestResult('Failed to send proof request: ' + err.message);
+    } finally {
+      setIsSettingSpendingCondition(false);
     }
   };
 
@@ -899,6 +904,7 @@ export default function CallContract({ tokenListRef }) {
           color="primary"
           onClick={handleSetProofRequest}
           disabled={
+            isSettingSpendingCondition ||
             !selectedSchema ||
             !selectedAttribute ||
             !selectedOperator ||
@@ -907,8 +913,9 @@ export default function CallContract({ tokenListRef }) {
             !selectedTokenId ||
             !proverRole
           }
+          startIcon={isSettingSpendingCondition && <CircularProgress size={18} />}
         >
-          Set Proof Request
+          {isSettingSpendingCondition ? 'Setting…' : 'Set Spending Condition'}
         </Button>
         {/*
         <Button
