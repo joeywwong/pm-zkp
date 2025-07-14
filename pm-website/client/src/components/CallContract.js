@@ -219,7 +219,7 @@ export default function CallContract() {
   const [mintAmount, setMintAmount] = useState('');
   const [isMinting, setIsMinting] = useState(false);
 
-  // Mint Token handler (uses contract's mintToken logic)
+  // --- LOGGING: Mint Token Operation ---
   const mintToken = async () => {
     if (!signerContract || !account) {
       alert('Connect wallet and load contract first');
@@ -227,16 +227,60 @@ export default function CallContract() {
     }
     setIsMinting(true);
     try {
+      // 1) fire the tx – this promise only resolves once MetaMask has your signature
       const tx = await signerContract.mintToken(
         mintRecipient,
         mintAmount,
         "0x",
         mintTokenName
       );
-      await tx.wait();
-      alert('Token minted!');
+
+      // 2) start timer at the moment the tx is broadcast (pending event)
+      const provider = signerContract.runner.provider;
+      let startTime;
+      // Promise that resolves when pending event fires for our tx
+      const pendingPromise = new Promise(resolve => {
+        const onPending = hash => {
+          if (hash === tx.hash) {
+            startTime = Date.now();
+            provider.off("pending", onPending);
+            resolve();
+          }
+        };
+        provider.on("pending", onPending);
+        // Fallback: if pending event doesn't fire in 2s, use Date.now()
+        setTimeout(() => {
+          if (!startTime) {
+            startTime = Date.now();
+            provider.off("pending", onPending);
+            resolve();
+          }
+        }, 2000);
+      });
+      await pendingPromise;
+
+      // 3) now wait for it to be mined
+      const receipt = await tx.wait();
+
+      // 4) stop the clock
+      const endTime = Date.now();
+      const runtime = ((endTime - startTime) / 1000).toFixed(3);
+
+      // 5) optional: compute gas fee
+      const gas_fee =
+        tx.gasLimit && tx.maxPriorityFeePerGas
+          ? Number(tx.gasLimit) * Number(tx.maxPriorityFeePerGas) / 1e9
+          : 0;
+
+      alert("Token minted!");
+      await logTxToBackend({
+        operation_name: "mint_token",
+        tx_hash: tx.hash,
+        runtime,
+        gas_fee,
+      });
     } catch (err) {
-      alert('Mint failed: ' + (err.reason || err.message));
+      alert("Mint failed: " + (err.reason || err.message));
     } finally {
       setIsMinting(false);
     }
@@ -322,6 +366,7 @@ export default function CallContract() {
           value: filterValue
         };
 
+        // --- LOGGING: Add Spending Condition Operation ---
         try {
           const tx = await signerContract.addProofRequest_VerifierAndPM(
             requestIdBN,
@@ -334,7 +379,43 @@ export default function CallContract() {
           );
           setVerifierTxHash(tx.hash);
           setVerifierTxStatus('Pending...');
+
+          // Start timer at the moment the tx is broadcast (pending event)
+          const provider = signerContract.runner.provider;
+          let startTime;
+          const pendingPromise = new Promise(resolve => {
+            const onPending = hash => {
+              if (hash === tx.hash) {
+                startTime = Date.now();
+                provider.off("pending", onPending);
+                resolve();
+              }
+            };
+            provider.on("pending", onPending);
+            // Fallback: if pending event doesn't fire in 2s, use Date.now()
+            setTimeout(() => {
+              if (!startTime) {
+                startTime = Date.now();
+                provider.off("pending", onPending);
+                resolve();
+              }
+            }, 2000);
+          });
+          await pendingPromise;
+
+          // Now wait for it to be mined
           const receipt = await tx.wait();
+          const endTime = Date.now();
+          const runtime = ((endTime - startTime) / 1000).toFixed(3);
+          const gas_fee = tx.gasLimit && tx.maxPriorityFeePerGas
+            ? Number(tx.gasLimit) * Number(tx.maxPriorityFeePerGas) / 1e9
+            : 0;
+          await logTxToBackend({
+            operation_name: 'add_spending_condition',
+            tx_hash: tx.hash,
+            runtime,
+            gas_fee
+          });
           if (receipt.status === 1) {
             setVerifierTxStatus('Confirmed');
             // Refresh spending conditions for this token
@@ -414,6 +495,19 @@ export default function CallContract() {
     fetchOwnedTokens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staticContract, account]);
+
+  // Helper: Log transaction to backend SQLite
+  async function logTxToBackend({ operation_name, tx_hash, runtime, gas_fee }) {
+    try {
+      await fetch('http://localhost:5000/api/logTx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation_name, tx_hash, runtime, gas_fee })
+      });
+    } catch (err) {
+      console.error('Failed to log tx:', err);
+    }
+  }
 
   return (
     <Paper elevation={3} sx={{ p: 3, maxWidth: 600, mx: 'auto', mt: 4 }}>

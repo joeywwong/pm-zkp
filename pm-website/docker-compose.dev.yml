@@ -18,8 +18,9 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile.dev
-    #volumes:
-    #  - ./server:/app
+    volumes:
+      - ./server/tx_metrics.db:/app/tx_metrics.db
+      - ./server/index.js:/app/index.js
     #  - /app/node_modules
     #  - /app/iden3_repo/node_modules
     ports:
