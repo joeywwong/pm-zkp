@@ -220,6 +220,10 @@ const TokenList = forwardRef((props, ref) => {
     }
     setTransferring(prev => ({ ...prev, [id]: true }));
     let proofNotVerified = false;
+    let txStartTime = null;
+    let txHash = null;
+    let minedTime = null;
+    let gasFee = null;
     try {
       // --- Fetch all proofRequestIDs ---
       const proofIds = [];
@@ -270,6 +274,21 @@ const TokenList = forwardRef((props, ref) => {
       // --- Proceed with ERC-1155 safeTransferFrom ---
       const recipient = recipients[id] || '';
       const amount = amounts[id] || '0';
+      // Logging: start timer at broadcast
+      txStartTime = Date.now();
+      let mined = false;
+      let timer = null;
+      // Listen for pending event for accurate timing
+      const provider = signerContract.runner?.provider || signerContract.provider;
+      const onPending = (pendingTxHash) => {
+        if (!txHash) return;
+        if (pendingTxHash === txHash) {
+          txStartTime = Date.now();
+        }
+      };
+      if (provider && provider.on) {
+        provider.on('pending', onPending);
+      }
       const tx = await signerContract.safeTransferFrom(
         account,
         recipient,
@@ -277,7 +296,37 @@ const TokenList = forwardRef((props, ref) => {
         amount,
         '0x'
       );
-      await tx.wait();
+      txHash = tx.hash;
+      // Fallback: if pending event doesn't fire, use timer
+      timer = setTimeout(() => {
+        if (!txStartTime) txStartTime = Date.now();
+      }, 500);
+      const receipt = await tx.wait();
+      minedTime = Date.now();
+      mined = true;
+      if (provider && provider.off) {
+        provider.off('pending', onPending);
+      }
+      if (timer) clearTimeout(timer);
+      // Calculate gas fee
+      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
+        gasFee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+      }
+      // Logging to backend
+      try {
+        await fetch('/api/logTx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operation_name: 'transfer_token',
+            tx_hash: txHash,
+            runtime: minedTime && txStartTime ? (minedTime - txStartTime) : null,
+            gas_fee: gasFee
+          })
+        });
+      } catch (e) {
+        // Ignore logging errors
+      }
 
       // Refresh this token's balance
       const newBal = await staticContract.balanceOf(account, id);
@@ -425,10 +474,57 @@ const TokenList = forwardRef((props, ref) => {
                                       return;
                                     }
                                     setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
+                                    let txStartTime = null;
+                                    let txHash = null;
+                                    let minedTime = null;
+                                    let gasFee = null;
+                                    let mined = false;
+                                    let timer = null;
                                     try {
+                                      // Logging: start timer at broadcast
+                                      txStartTime = Date.now();
+                                      const provider = signerContract.runner?.provider || signerContract.provider;
+                                      const onPending = (pendingTxHash) => {
+                                        if (!txHash) return;
+                                        if (pendingTxHash === txHash) {
+                                          txStartTime = Date.now();
+                                        }
+                                      };
+                                      if (provider && provider.on) {
+                                        provider.on('pending', onPending);
+                                      }
                                       // Only admin can remove
                                       const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
-                                      await tx.wait();
+                                      txHash = tx.hash;
+                                      timer = setTimeout(() => {
+                                        if (!txStartTime) txStartTime = Date.now();
+                                      }, 500);
+                                      const receipt = await tx.wait();
+                                      minedTime = Date.now();
+                                      mined = true;
+                                      if (provider && provider.off) {
+                                        provider.off('pending', onPending);
+                                      }
+                                      if (timer) clearTimeout(timer);
+                                      // Calculate gas fee
+                                      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
+                                        gasFee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+                                      }
+                                      // Logging to backend
+                                      try {
+                                        await fetch('/api/logTx', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            operation_name: 'remove_spending_condition',
+                                            tx_hash: txHash,
+                                            runtime: minedTime && txStartTime ? (minedTime - txStartTime) : null,
+                                            gas_fee: gasFee
+                                          })
+                                        });
+                                      } catch (e) {
+                                        // Ignore logging errors
+                                      }
                                       // Refresh spending conditions for this token
                                       try {
                                         const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId);

@@ -263,7 +263,49 @@ export default function CallContract({ tokenListRef }) {
         "0x",
         mintTokenName
       );
-      await tx.wait();
+      // Start timer at broadcast
+      const provider = signerContract.runner.provider;
+      let startTime;
+      const pendingPromise = new Promise(resolve => {
+        const onPending = hash => {
+          if (hash === tx.hash) {
+            startTime = Date.now();
+            provider.off("pending", onPending);
+            resolve();
+          }
+        };
+        provider.on("pending", onPending);
+        setTimeout(() => {
+          if (!startTime) {
+            startTime = Date.now();
+            provider.off("pending", onPending);
+            resolve();
+          }
+        }, 2000);
+      });
+      await pendingPromise;
+      const receipt = await tx.wait();
+      const endTime = Date.now();
+      const runtime = ((endTime - startTime) / 1000).toFixed(3);
+      let gas_fee = 0;
+      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
+        gas_fee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+      }
+      // Logging to backend
+      try {
+        await fetch('http://localhost:5000/api/logTx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operation_name: 'mint_token',
+            tx_hash: tx.hash,
+            runtime,
+            gas_fee
+          })
+        });
+      } catch (err) {
+        console.error('Failed to log tx:', err);
+      }
       alert('Token minted!');
       // Add new token to TokenList if not present, otherwise refresh balance
       if (tokenListRef && tokenListRef.current) {
@@ -407,7 +449,49 @@ export default function CallContract({ tokenListRef }) {
           );
           setVerifierTxHash(tx.hash);
           setVerifierTxStatus('Pending...');
+          // Start timer at broadcast
+          const provider = signerContract.runner.provider;
+          let startTime;
+          const pendingPromise = new Promise(resolve => {
+            const onPending = hash => {
+              if (hash === tx.hash) {
+                startTime = Date.now();
+                provider.off("pending", onPending);
+                resolve();
+              }
+            };
+            provider.on("pending", onPending);
+            setTimeout(() => {
+              if (!startTime) {
+                startTime = Date.now();
+                provider.off("pending", onPending);
+                resolve();
+              }
+            }, 2000);
+          });
+          await pendingPromise;
           const receipt = await tx.wait();
+          const endTime = Date.now();
+          const runtime = ((endTime - startTime) / 1000).toFixed(3);
+          let gas_fee = 0;
+          if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
+            gas_fee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+          }
+          // Logging to backend
+          try {
+            await fetch('http://localhost:5000/api/logTx', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                operation_name: 'add_spending_condition',
+                tx_hash: tx.hash,
+                runtime,
+                gas_fee
+              })
+            });
+          } catch (err) {
+            console.error('Failed to log tx:', err);
+          }
           if (receipt.status === 1) {
             setVerifierTxStatus('Confirmed');
             // Refresh spending conditions for this token only
