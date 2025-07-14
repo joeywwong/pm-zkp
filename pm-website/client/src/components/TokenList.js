@@ -274,21 +274,9 @@ const TokenList = forwardRef((props, ref) => {
       // --- Proceed with ERC-1155 safeTransferFrom ---
       const recipient = recipients[id] || '';
       const amount = amounts[id] || '0';
-      // Logging: start timer at broadcast
-      txStartTime = Date.now();
-      let mined = false;
-      let timer = null;
-      // Listen for pending event for accurate timing
       const provider = signerContract.runner?.provider || signerContract.provider;
-      const onPending = (pendingTxHash) => {
-        if (!txHash) return;
-        if (pendingTxHash === txHash) {
-          txStartTime = Date.now();
-        }
-      };
-      if (provider && provider.on) {
-        provider.on('pending', onPending);
-      }
+      let startTime;
+      let txHash;
       const tx = await signerContract.safeTransferFrom(
         account,
         recipient,
@@ -297,31 +285,47 @@ const TokenList = forwardRef((props, ref) => {
         '0x'
       );
       txHash = tx.hash;
-      // Fallback: if pending event doesn't fire, use timer
-      timer = setTimeout(() => {
-        if (!txStartTime) txStartTime = Date.now();
-      }, 500);
+      const pendingPromise = new Promise(resolve => {
+        const onPending = hash => {
+          if (hash === txHash) {
+            startTime = Date.now();
+            provider.off('pending', onPending);
+            resolve();
+          }
+        };
+        provider.on('pending', onPending);
+        setTimeout(() => {
+          if (!startTime) {
+            startTime = Date.now();
+            provider.off('pending', onPending);
+            resolve();
+          }
+        }, 2000);
+      });
+      await pendingPromise;
       const receipt = await tx.wait();
-      minedTime = Date.now();
-      mined = true;
-      if (provider && provider.off) {
-        provider.off('pending', onPending);
-      }
-      if (timer) clearTimeout(timer);
-      // Calculate gas fee
-      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
-        gasFee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+      const endTime = Date.now();
+      const runtime = ((endTime - startTime) / 1000).toFixed(3);
+      let gas_fee = 0;
+      if (receipt && receipt.gasUsed) {
+        // Try to use receipt.effectiveGasPrice first.
+        // If not available, fallback to receipt.gasPrice.
+        // Testnet may not have effectiveGasPrice.
+        const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
+        if (gasPrice) {
+          gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
+        }
       }
       // Logging to backend
       try {
-        await fetch('/api/logTx', {
+        await fetch('http://localhost:5000/api/logTx', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             operation_name: 'transfer_token',
             tx_hash: txHash,
-            runtime: minedTime && txStartTime ? (minedTime - txStartTime) : null,
-            gas_fee: gasFee
+            runtime,
+            gas_fee
           })
         });
       } catch (e) {
@@ -474,52 +478,55 @@ const TokenList = forwardRef((props, ref) => {
                                       return;
                                     }
                                     setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
-                                    let txStartTime = null;
-                                    let txHash = null;
-                                    let minedTime = null;
-                                    let gasFee = null;
-                                    let mined = false;
-                                    let timer = null;
+                                    let gas_fee = 0;
+                                    let startTime;
+                                    let txHash;
                                     try {
-                                      // Logging: start timer at broadcast
-                                      txStartTime = Date.now();
                                       const provider = signerContract.runner?.provider || signerContract.provider;
-                                      const onPending = (pendingTxHash) => {
-                                        if (!txHash) return;
-                                        if (pendingTxHash === txHash) {
-                                          txStartTime = Date.now();
-                                        }
-                                      };
-                                      if (provider && provider.on) {
-                                        provider.on('pending', onPending);
-                                      }
                                       // Only admin can remove
                                       const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
                                       txHash = tx.hash;
-                                      timer = setTimeout(() => {
-                                        if (!txStartTime) txStartTime = Date.now();
-                                      }, 500);
+                                      const pendingPromise = new Promise(resolve => {
+                                        const onPending = hash => {
+                                          if (hash === txHash) {
+                                            startTime = Date.now();
+                                            provider.off('pending', onPending);
+                                            resolve();
+                                          }
+                                        };
+                                        provider.on('pending', onPending);
+                                        setTimeout(() => {
+                                          if (!startTime) {
+                                            startTime = Date.now();
+                                            provider.off('pending', onPending);
+                                            resolve();
+                                          }
+                                        }, 2000);
+                                      });
+                                      await pendingPromise;
                                       const receipt = await tx.wait();
-                                      minedTime = Date.now();
-                                      mined = true;
-                                      if (provider && provider.off) {
-                                        provider.off('pending', onPending);
-                                      }
-                                      if (timer) clearTimeout(timer);
+                                      const endTime = Date.now();
+                                      const runtime = ((endTime - startTime) / 1000).toFixed(3);
                                       // Calculate gas fee
-                                      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
-                                        gasFee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+                                      if (receipt && receipt.gasUsed) {
+                                        // Try to use receipt.effectiveGasPrice first.
+                                        // If not available, fallback to receipt.gasPrice.
+                                        // Testnet may not have effectiveGasPrice.
+                                        const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
+                                        if (gasPrice) {
+                                          gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
+                                        }
                                       }
                                       // Logging to backend
                                       try {
-                                        await fetch('/api/logTx', {
+                                        await fetch('http://localhost:5000/api/logTx', {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
                                           body: JSON.stringify({
                                             operation_name: 'remove_spending_condition',
                                             tx_hash: txHash,
-                                            runtime: minedTime && txStartTime ? (minedTime - txStartTime) : null,
-                                            gas_fee: gasFee
+                                            runtime,
+                                            gas_fee
                                           })
                                         });
                                       } catch (e) {
