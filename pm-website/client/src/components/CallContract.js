@@ -288,9 +288,15 @@ export default function CallContract({ tokenListRef }) {
       const endTime = Date.now();
       const runtime = ((endTime - startTime) / 1000).toFixed(3);
       let gas_fee = 0;
-      if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
-        gas_fee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+      if (receipt && receipt.gasUsed && receipt.gasPrice) {
+        // Try to use receipt.effectiveGasPrice first.
+        // If not available, fallback to receipt.gasPrice.
+        // Testnet may not have effectiveGasPrice.
+        gas_fee = receipt.gasPrice
+          ? ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(receipt.gasPrice))
+          : 0;
       }
+      console.log('gasUsed:', receipt.gasUsed, 'gasPrice:', receipt.gasPrice);
       // Logging to backend
       try {
         await fetch('http://localhost:5000/api/logTx', {
@@ -474,9 +480,15 @@ export default function CallContract({ tokenListRef }) {
           const endTime = Date.now();
           const runtime = ((endTime - startTime) / 1000).toFixed(3);
           let gas_fee = 0;
-          if (receipt && receipt.gasUsed && receipt.effectiveGasPrice) {
-            gas_fee = ethers.formatEther(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+          if (receipt && receipt.gasUsed && receipt.gasPrice) {
+            // Try to use receipt.effectiveGasPrice first.
+            // If not available, fallback to receipt.gasPrice.
+            // Testnet may not have effectiveGasPrice.
+            gas_fee = receipt.gasPrice
+              ? ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(receipt.gasPrice))
+              : 0;
           }
+          console.log('gasUsed:', receipt.gasUsed, 'gasPrice:', receipt.gasPrice);
           // Logging to backend
           try {
             await fetch('http://localhost:5000/api/logTx', {
