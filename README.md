@@ -6,6 +6,7 @@ https://docs.privado.id/docs/issuer/setup-issuer-ui/
 
 # PM-website
 See below instruction before running the website.
+
 ## Getting started
 
 These instructions will get the development environment up and running on your local machine.
@@ -15,6 +16,10 @@ These instructions will get the development environment up and running on your l
 - **Node.js**
 - **npm**
 - **Docker** & **Docker Compose**
+
+### (Important) Note for MetaMask transactions on Polygon Amoy
+
+The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 27 gwei). Otherwise, most transactions will fail.
 
 ### Setup Steps
 1. **Build and start all services**  
