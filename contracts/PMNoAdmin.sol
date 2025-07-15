@@ -10,7 +10,7 @@ import {UniversalVerifier} from '@iden3/contracts/verifiers/UniversalVerifier.so
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { IZKPVerifier } from '@iden3/contracts/interfaces/IZKPVerifier.sol';
 
-contract PMUniversalVerifier is ERC1155, Ownable {
+contract PMNoAdmin is ERC1155, Ownable {
     address[] private admins;
 
     // Getter function for the admins array, only callable by the owner.
@@ -79,20 +79,20 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         string value;
     }
 
-    // Mapping from tokenID to proofRequestID to spending condition
-    // tokenID => (proofRequestID => SpendingCondition)
-    mapping(uint256 => mapping(uint64 => SpendingCondition)) public spendingConditions;
+    // Mapping from tokenID to user address to proofRequestID to spending condition
+    // tokenID => (moneyOwnerAddress => (proofRequestID => SpendingCondition))
+    mapping(uint256 => mapping(address => mapping(uint64 => SpendingCondition))) public spendingConditions;
 
     // An array to store proof_request_ids only for iteration.
     uint64[] public proofRequestIDs;
     
-    /// @notice Get all spending conditions for a given tokenID
-    function getSpendingConditions(uint256 tokenID) external view returns (uint64[] memory, SpendingCondition[] memory) {
+    /// @notice Get all spending conditions for a given tokenID and user
+    function getSpendingConditions(uint256 tokenID, address user) external view returns (uint64[] memory, SpendingCondition[] memory) {
         uint64[] memory ids = proofRequestIDs;
         uint256 count = 0;
-        // First, count how many proofRequestIDs are associated with this tokenID
+        // First, count how many proofRequestIDs are associated with this tokenID for this user
         for (uint256 i = 0; i < ids.length; i++) {
-            if (bytes(spendingConditions[tokenID][ids[i]].attribute).length > 0) {
+            if (bytes(spendingConditions[tokenID][user][ids[i]].attribute).length > 0) {
                 count++;
             }
         }
@@ -101,9 +101,9 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         SpendingCondition[] memory conditions = new SpendingCondition[](count);
         uint256 idx = 0;
         for (uint256 i = 0; i < ids.length; i++) {
-            if (bytes(spendingConditions[tokenID][ids[i]].attribute).length > 0) {
+            if (bytes(spendingConditions[tokenID][user][ids[i]].attribute).length > 0) {
                 filteredIDs[idx] = ids[i];
-                conditions[idx] = spendingConditions[tokenID][ids[i]];
+                conditions[idx] = spendingConditions[tokenID][user][ids[i]];
                 idx++;
             }
         }
@@ -114,7 +114,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     // The array proofRequestIDs is updated accordingly.
     // Add a new proof request and the corresponding role ('sender' or 'receiver').
     // The array proofRequestIDs is updated accordingly.
-    function addProofRequestAndRole(uint256 tokenID, uint64 requestID, string calldata role) public onlyAdmin {
+    function addProofRequestAndRole(uint256 tokenID, uint64 requestID, string calldata role) private {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
         require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length == 0, "Proof request already exists");
         require(
@@ -135,6 +135,8 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         string calldata role,
         SpendingCondition calldata condition
     ) public {
+        // Only allow if caller owns the tokenID
+        require(balanceOf(msg.sender, tokenID) > 0, "Only money owner can add spending condition.");
         // Build the IZKPVerifier.ZKPRequest struct
         IZKPVerifier.ZKPRequest memory req = IZKPVerifier.ZKPRequest({
             metadata: metadata,
@@ -145,7 +147,7 @@ contract PMUniversalVerifier is ERC1155, Ownable {
         verifier.setZKPRequest(requestId, req);
         addProofRequestAndRole(tokenID, requestId, role);
         // Add the spending condition
-        spendingConditions[tokenID][requestId] = SpendingCondition({
+        spendingConditions[tokenID][msg.sender][requestId] = SpendingCondition({
             attribute: condition.attribute,
             operatorStr: condition.operatorStr,
             value: condition.value
@@ -154,11 +156,13 @@ contract PMUniversalVerifier is ERC1155, Ownable {
     
     // Delete a proof request and the address by ID.
     // The array proofRequestIDs is updated accordingly.
-    function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) public onlyAdmin {
+    function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) public {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
         require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length != 0, "Proof request does not exist");
+        // Only delete if the spending condition exists for this user
+        require(bytes(spendingConditions[tokenID][msg.sender][requestID].attribute).length != 0, "No spending condition to delete");
         delete tokenID_proofRequest_role[tokenID][requestID];
-        delete spendingConditions[tokenID][requestID];
+        delete spendingConditions[tokenID][msg.sender][requestID];
         // Remove ID from the array (swap-and-pop technique)
         for (uint256 i = 0; i < proofRequestIDs.length; i++) {
             if (proofRequestIDs[i] == requestID) {
@@ -168,9 +172,6 @@ contract PMUniversalVerifier is ERC1155, Ownable {
             }
         }
     }
-
-    uint256 public constant fungible_token = 1;
-    uint256 public constant non_fungible_token = 2;
 
     UniversalVerifier public verifier;
 
@@ -183,7 +184,6 @@ contract PMUniversalVerifier is ERC1155, Ownable {
 
     // Custom error declaration (check if token id already taken, when minting new token)
     error TokenIDTaken(uint256 tokenID);
-
 
     // Reverts with TokenIDNotFound if the ID hasn’t been registered yet.
     error TokenIDNotFound(uint256 tokenID);
