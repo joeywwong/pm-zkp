@@ -49,7 +49,7 @@ PM contract
 - [x] Show token names over ID
 
 ### Evaluation
-- [ ] Record transaction gas fees in the database
+- [x] Record transaction gas fees in the database
 
 
 

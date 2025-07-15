@@ -59,4 +59,4 @@ These instructions will get the development environment up and running on your l
 - [x] Show token names over ID
 
 ### Evaluation
-- [ ] Record transaction gas fees in the database
+- [x] Record transaction gas fees in the database
