@@ -5,7 +5,7 @@ const path = require('path');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5010;
 //const { prepareRequestParams } = require('./iden3_repo/dist/prepareRequestParams');
 
 const db = new sqlite3.Database(path.join(__dirname, 'tx_metrics.db'));

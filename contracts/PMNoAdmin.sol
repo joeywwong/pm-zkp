@@ -68,9 +68,9 @@ contract PMNoAdmin is ERC1155, Ownable {
     mapping(uint256 => string) public tokenName;
 
 
-    // Mapping from tokenID to proof_request_id to prover's role (a string 'sender' or 'receiver').
-    // tokenID → (proofRequestID → 'sender' or 'receiver')
-    mapping(uint256 => mapping(uint64 => string)) public tokenID_proofRequest_role;
+    // Mapping from tokenID to request setter address to proof_request_id to prover's role (a string 'sender' or 'receiver').
+    // tokenID → (setter → (proofRequestID → 'sender' or 'receiver'))
+    mapping(uint256 => mapping(address => mapping(uint64 => string))) public tokenID_requestSetter_proofRequest_role;
 
     // Struct to represent a spending condition
     struct SpendingCondition {
@@ -116,13 +116,13 @@ contract PMNoAdmin is ERC1155, Ownable {
     // The array proofRequestIDs is updated accordingly.
     function addProofRequestAndRole(uint256 tokenID, uint64 requestID, string calldata role) private {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length == 0, "Proof request already exists");
+        require(bytes(tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID]).length == 0, "Proof request already exists");
         require(
             keccak256(bytes(role)) == keccak256(bytes("sender")) ||
             keccak256(bytes(role)) == keccak256(bytes("receiver")),
             "Role must be 'sender' or 'receiver'"
         );
-        tokenID_proofRequest_role[tokenID][requestID] = role;
+        tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID] = role;
         proofRequestIDs.push(requestID);
     }
     
@@ -158,10 +158,10 @@ contract PMNoAdmin is ERC1155, Ownable {
     // The array proofRequestIDs is updated accordingly.
     function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) public {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length != 0, "Proof request does not exist");
+        require(bytes(tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID]).length != 0, "Proof request does not exist");
         // Only delete if the spending condition exists for this user
         require(bytes(spendingConditions[tokenID][msg.sender][requestID].attribute).length != 0, "No spending condition to delete");
-        delete tokenID_proofRequest_role[tokenID][requestID];
+        delete tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID];
         delete spendingConditions[tokenID][msg.sender][requestID];
         // Remove ID from the array (swap-and-pop technique)
         for (uint256 i = 0; i < proofRequestIDs.length; i++) {
@@ -235,7 +235,7 @@ contract PMNoAdmin is ERC1155, Ownable {
     function _checkAllProofsVerified(uint256 tokenID, address sender, address receiver) internal view {
         uint64[] memory tempRequestIDs = proofRequestIDs;
         for (uint256 i = 0; i < tempRequestIDs.length; i++) {
-            string memory role = tokenID_proofRequest_role[tokenID][tempRequestIDs[i]];
+            string memory role = tokenID_requestSetter_proofRequest_role[tokenID][sender][tempRequestIDs[i]];
             if (bytes(role).length == 0) continue;
             if (keccak256(bytes(role)) == keccak256(bytes("sender"))) {
                 if (!verifier.getProofStatus(sender, tempRequestIDs[i]).isVerified) {

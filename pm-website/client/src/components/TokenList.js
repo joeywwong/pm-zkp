@@ -68,11 +68,11 @@ const TokenList = forwardRef((props, ref) => {
       const scs = {};
       for (const id of ids) {
         try {
-          const [scIds, scArr] = await staticContract.getSpendingConditions(id);
+          const [scIds, scArr] = await staticContract.getSpendingConditions(id, account);
           // Fetch roles for each spending condition
           const roles = [];
           for (let i = 0; i < scIds.length; i++) {
-            const role = await staticContract.tokenID_proofRequest_role(id, scIds[i]);
+            const role = await staticContract.tokenID_requestSetter_proofRequest_role(id, account, scIds[i]);
             roles.push(role);
           }
           scs[id] = scIds.map((scId, idx) => {
@@ -105,13 +105,13 @@ const TokenList = forwardRef((props, ref) => {
   // Expose refreshTokens and per-token refresh methods to parent component
   // This allows parent components to trigger a refresh of the token list or individual tokens
   const refreshTokenSpendingConditions = async (tokenId) => {
-    if (!staticContract) return;
+    if (!staticContract || !account) return;
     try {
-      const [scIds, scArr] = await staticContract.getSpendingConditions(tokenId);
+      const [scIds, scArr] = await staticContract.getSpendingConditions(tokenId, account);
       // Fetch roles for each spending condition
       const roles = [];
       for (let i = 0; i < scIds.length; i++) {
-        const role = await staticContract.tokenID_proofRequest_role(tokenId, scIds[i]);
+        const role = await staticContract.tokenID_requestSetter_proofRequest_role(tokenId, account, scIds[i]);
         roles.push(role);
       }
       const updated = scIds.map((scId, idx) => {
@@ -162,7 +162,7 @@ const TokenList = forwardRef((props, ref) => {
         // Fetch roles for each spending condition
         const roles = [];
         for (let i = 0; i < scIds.length; i++) {
-          const role = await staticContract.tokenID_proofRequest_role(tokenId, scIds[i]);
+          const role = await staticContract.tokenID_requestSetter_proofRequest_role(tokenId, account, scIds[i]);
           roles.push(role);
         }
         scArr = scIds.map((scId, idx) => {
@@ -225,25 +225,13 @@ const TokenList = forwardRef((props, ref) => {
     let minedTime = null;
     let gasFee = null;
     try {
-      // --- Fetch all proofRequestIDs ---
-      const proofIds = [];
-      let idx = 0;
-      while (true) {
-        try {
-          const pid = await staticContract.proofRequestIDs(idx);
-          proofIds.push(pid);
-          idx++;
-        } catch {
-          break;
-        }
-      }
-
-      // --- Build pairs and filter zero address ---
+      // --- Fetch only current user's spending conditions ---
+      const [scIds, scArr] = await staticContract.getSpendingConditions(id, account);
       const proofPairs = [];
-      for (const pid of proofIds) {
-        const role = await staticContract.tokenID_proofRequest_role(id, pid);
+      for (let i = 0; i < scIds.length; i++) {
+        const role = await staticContract.tokenID_requestSetter_proofRequest_role(id, account, scIds[i]);
         if (role === 'sender' || role === 'receiver') {
-          proofPairs.push({ requestId: pid.toString(), role });
+          proofPairs.push({ requestId: scIds[i].toString(), role });
         }
       }
 
@@ -318,7 +306,7 @@ const TokenList = forwardRef((props, ref) => {
       }
       // Logging to backend
       try {
-        await fetch('http://localhost:5000/api/logTx', {
+        await fetch('http://localhost:5010/api/logTx', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -483,7 +471,7 @@ const TokenList = forwardRef((props, ref) => {
                                     let txHash;
                                     try {
                                       const provider = signerContract.runner?.provider || signerContract.provider;
-                                      // Only admin can remove
+                                      // Remove only user's own spending condition
                                       const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
                                       txHash = tx.hash;
                                       const pendingPromise = new Promise(resolve => {
@@ -519,7 +507,7 @@ const TokenList = forwardRef((props, ref) => {
                                       }
                                       // Logging to backend
                                       try {
-                                        await fetch('http://localhost:5000/api/logTx', {
+                                        await fetch('http://localhost:5010/api/logTx', {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json' },
                                           body: JSON.stringify({
@@ -534,10 +522,10 @@ const TokenList = forwardRef((props, ref) => {
                                       }
                                       // Refresh spending conditions for this token
                                       try {
-                                        const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId);
+                                        const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
                                         const roles = [];
                                         for (let i = 0; i < scIds.length; i++) {
-                                          const role = await staticContract.tokenID_proofRequest_role(selectedTokenId, scIds[i]);
+                                          const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
                                           roles.push(role);
                                         }
                                         const updated = scIds.map((scId, idx) => {

@@ -44,17 +44,17 @@ export default function CallContract({ tokenListRef }) {
   const [spendingConditions, setSpendingConditions] = useState([]);
 
   const fetchBalance = async () => {
-    if (!staticContract) {
-      console.error('Contract not ready');
+    if (!staticContract || !account) {
+      console.error('Contract or account not ready');
       return;
     }
     try {
       const result = await staticContract.balanceOf(balanceAddress, balanceTokenId);
       setBalance(result.toString());
-      // Fetch spending conditions for this token
-      if (balanceTokenId) {
+      // Fetch spending conditions for this token for the current user
+      if (balanceTokenId && account) {
         try {
-          const [ids, conditions] = await staticContract.getSpendingConditions(balanceTokenId);
+          const [ids, conditions] = await staticContract.getSpendingConditions(balanceTokenId, account);
           const formatted = ids.map((id, idx) => ({
             proofRequestId: id,
             ...conditions[idx]
@@ -136,41 +136,6 @@ export default function CallContract({ tokenListRef }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [txStatus, setTxStatus] = useState('');
-
-  // const addProofRequest = async () => {
-  //   if (!signerContract || !account) {
-  //     alert('Connect wallet and load contract first');
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setTxHash('');
-  //   setTxStatus('Pending…');
-
-  //   try {
-  //     const tx = await signerContract.addProofRequestAndAddress(
-  //       tokenID_addRequest,
-  //       requestID,
-  //       proverAddress
-  //     );
-
-  //     // capture tx hash immediately
-  //     setTxHash(tx.hash);
-
-  //     // wait for confirmation
-  //     const receipt = await tx.wait();
-  //     if (receipt.status === 1) {
-  //       setTxStatus('Confirmed');
-  //     } else {
-  //       setTxStatus('Failed');
-  //     }
-  //   } catch (err) {
-  //     const reason = err.reason || err.errorArgs?.[1] || err.message;
-  //     setTxStatus(`Error: ${reason}`);
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
 
   // proof request setup (json-LD) related
   // Determine attribute data type to adjust operator options
@@ -299,7 +264,7 @@ export default function CallContract({ tokenListRef }) {
       console.log('gasUsed:', receipt.gasUsed, 'gasPrice:', receipt.gasPrice);
       // Logging to backend
       try {
-        await fetch('http://localhost:5000/api/logTx', {
+        await fetch('http://localhost:5010/api/logTx', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -395,7 +360,7 @@ export default function CallContract({ tokenListRef }) {
       return;
     }
     try {
-      const response = await fetch('http://localhost:5000/api/requestPayload', {
+      const response = await fetch('http://localhost:5010/api/requestPayload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -491,7 +456,7 @@ export default function CallContract({ tokenListRef }) {
           console.log('gasUsed:', receipt.gasUsed, 'gasPrice:', receipt.gasPrice);
           // Logging to backend
           try {
-            await fetch('http://localhost:5000/api/logTx', {
+            await fetch('http://localhost:5010/api/logTx', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -510,9 +475,9 @@ export default function CallContract({ tokenListRef }) {
             if (tokenListRef && tokenListRef.current && typeof tokenListRef.current.refreshTokenSpendingConditions === 'function') {
               tokenListRef.current.refreshTokenSpendingConditions(tokenId);
             }
-            if (tokenId) {
+            if (tokenId && account) {
               try {
-                const [ids, conditions] = await staticContract.getSpendingConditions(tokenId);
+                const [ids, conditions] = await staticContract.getSpendingConditions(tokenId, account);
                 const formatted = ids.map((id, idx) => ({
                   proofRequestId: id,
                   ...conditions[idx]
@@ -667,130 +632,9 @@ export default function CallContract({ tokenListRef }) {
         </Button>
       </Box>
 
-      {/* Check ERC-1155 Balance Section */}
-      {/*
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Check ERC-1155 Balance
-      </Typography>
-      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <TextField
-          label="Wallet Address"
-          value={balanceAddress}
-          onChange={e => setBalanceAddress(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <TextField
-          label="Token ID"
-          value={balanceTokenId}
-          onChange={e => setBalanceTokenId(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <Button variant="contained" onClick={fetchBalance}>
-          Get Balance
-        </Button>
-      </Stack>
-      {balance !== null && (
-        <>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Balance: <b>{balance}</b>
-          </Typography>
-          {spendingConditions.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1">Spending Conditions:</Typography>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {spendingConditions.map((cond, idx) => {
-                  // Translate operatorStr if possible
-                  let opLabel = cond.operatorStr;
-                  const operatorLabelMap = {
-                    '$eq': 'is equal to',
-                    '$ne': 'is not equal to',
-                    '$in': 'matches one of the values',
-                    '$nin': 'matches none of the values',
-                    '$lt': 'is less than',
-                    '$gt': 'is greater than',
-                  };
-                  if (operatorLabelMap[opLabel]) {
-                    opLabel = operatorLabelMap[opLabel];
-                  } else if ((opLabel || '').startsWith('$')) {
-                    opLabel = opLabel.substring(1);
-                  } else if (!opLabel) {
-                    opLabel = '';
-                  }
-                  // Determine prover role (sender/receiver)
-                  let proverRole = '';
-                  if (cond.role === 'sender' || cond.proverRole === 'sender') {
-                    proverRole = "Sender's";
-                  } else if (cond.role === 'receiver' || cond.proverRole === 'receiver') {
-                    proverRole = "Receiver's";
-                  } else {
-                    proverRole = '';
-                  }
-                  return (
-                    <li key={cond.proofRequestId.toString()}>
-                      <span>
-                        {proverRole} {cond.attribute} {opLabel} {cond.value}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Box>
-          )}
-        </>
-      )}
-      */}
-
-      {/* Uncomment to enable transfer UI */}
-      {/*
-      <Typography variant="h5" gutterBottom>
-        Transfer ERC-1155 Token
-      </Typography>
-      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <TextField
-          label="Recipient Address"
-          value={recipient}
-          onChange={e => setRecipient(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <TextField
-          label="Token ID"
-          value={transferTokenId}
-          onChange={e => setTransferTokenId(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <TextField
-          label="Amount"
-          type="number"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        <Button variant="contained" onClick={transferToken}>
-          Transfer Token
-        </Button>
-      </Stack>
-      {error && (
-        <Typography color="error" variant="body2">{error}</Typography>
-      )}
-      */}
-
       <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
         Set Proof Request
       </Typography>
-
-      {/* JSON-LD URL Input */}
-      {/* <TextField
-        label="JSON-LD URL"
-        value={jsonLdUrl}
-        onChange={e => setJsonLdUrl(e.target.value)}
-        fullWidth
-        margin="normal"
-      /> */}
 
       {/* JSON-LD Loader */}
       <Box mb={2}>
@@ -957,24 +801,7 @@ export default function CallContract({ tokenListRef }) {
             ))}
           </Select>
         </FormControl>
-        {/*
-        <TextField
-          label="TokenID"
-          value={tokenID_addRequest}
-          onChange={e => set_tokenID_addRequest(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        */}
-        {/*
-        <TextField
-          label="Proof Request ID"
-          value={requestID}
-          onChange={e => set_requestID(e.target.value)}
-          size="small"
-          fullWidth
-        />
-        */}
+
         <FormControl fullWidth size="small">
           <InputLabel id="proof-role-label">Who is the prover?</InputLabel>
           <Select
@@ -1013,16 +840,6 @@ export default function CallContract({ tokenListRef }) {
         >
           {isSettingSpendingCondition ? 'Setting…' : 'Set Spending Condition'}
         </Button>
-        {/*
-        <Button
-          variant="outlined"
-          onClick={addProofRequest}
-          disabled={isSubmitting}
-          startIcon={isSubmitting && <CircularProgress size={18} />}
-        >
-          {isSubmitting ? 'Submitting…' : 'Add to PM Contract'}
-        </Button>
-        */}
       </Stack>
 
       {/* PM Contract Transaction Status */}

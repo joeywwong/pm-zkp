@@ -1,6 +1,8 @@
 version: "3.8"
 services:
   client:
+    container_name: client-no-admin
+    image: client-no-admin
     build:
       context: ./client
       dockerfile: Dockerfile.dev
@@ -9,12 +11,14 @@ services:
       - ./client/public:/app/public
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "3012:3000"
     environment:
     - WATCHPACK_POLLING=true    # ensure file changes are detected
     - HOST=0.0.0.0              # bind dev server to all interfaces
 
   server:
+    container_name: server-no-admin
+    image: server-no-admin
     build:
       context: ./server
       dockerfile: Dockerfile.dev
@@ -24,7 +28,7 @@ services:
     #  - /app/node_modules
     #  - /app/iden3_repo/node_modules
     ports:
-      - "5000:5000"
+      - "5010:5010"
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true    # ensure file changes are detected
