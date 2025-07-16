@@ -21,7 +21,11 @@ import {
   Divider,
   Modal,
   Grow,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const TokenList = forwardRef((props, ref) => {
   const [selectedTokenId, setSelectedTokenId] = useState(null);
@@ -410,8 +414,8 @@ const TokenList = forwardRef((props, ref) => {
         <Grow in={!!selectedTokenId} timeout={300}>
           <Box sx={{ outline: 'none' }}>
             {selectedTokenId && (
-              <Card elevation={6} sx={{ width: 420, maxWidth: '90vw', minHeight: 420, p: 2, display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              <Card elevation={6} sx={{ width: 420, maxWidth: '90vw', minHeight: 420, maxHeight: '95vh', p: 2, display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', maxHeight: '80vh' }}>
                   <Typography variant="h5" gutterBottom>
                     {tokenNames[selectedTokenId] || 'Unnamed Token'}
                   </Typography>
@@ -590,33 +594,35 @@ const TokenList = forwardRef((props, ref) => {
                     </Alert>
                   )}
                   {proofStatuses[selectedTokenId] && (
-                    <Box mt={2}>
-                      <Divider sx={{ mb: 1 }} />
-                      <Typography variant="subtitle2" gutterBottom>
-                        Proof Statuses:
-                      </Typography>
-                      {proofStatuses[selectedTokenId].map(ps => (
-                        <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
-                          <Typography variant="caption" display="block">
-                            Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
-                          </Typography>
-                          <Typography variant="caption" display="block">
-                            Request ID: {ps.requestId}
-                          </Typography>
-                          <Typography variant="caption" display="block">
-                            Verified: {ps.isVerified ? 'Yes' : 'No'}
-                          </Typography>
-                          {!ps.isVerified && ps.url && (
+                    <Accordion sx={{ mt: 2 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="subtitle2">Proof Statuses</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Divider sx={{ mb: 1 }} />
+                        {proofStatuses[selectedTokenId].map(ps => (
+                          <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
                             <Typography variant="caption" display="block">
-                              URL:{' '}
-                              <Link href={ps.url} target="_blank" rel="noopener noreferrer">
-                                {ps.url}
-                              </Link>
+                              Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
                             </Typography>
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
+                            <Typography variant="caption" display="block">
+                              Request ID: {ps.requestId}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                              Verified: {ps.isVerified ? 'Yes' : 'No'}
+                            </Typography>
+                            {!ps.isVerified && ps.url && (
+                              <Typography variant="caption" display="block">
+                                URL:{' '}
+                                <Link href={ps.url} target="_blank" rel="noopener noreferrer">
+                                  {ps.url}
+                                </Link>
+                              </Typography>
+                            )}
+                          </Box>
+                        ))}
+                      </AccordionDetails>
+                    </Accordion>
                   )}
                 </CardContent>
                 <CardActions>
