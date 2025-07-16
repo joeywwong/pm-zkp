@@ -16,10 +16,10 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 
 ### Setup Steps
 1. **Build and start all services**  
-   ```bash
-   ./setup.sh
+  ```bash
+  ./setup.sh
   ```
-  
+
    The `docker-compose` command is in a script for convenience. Running this will:
    - Install dependencies for the **frontend**, **backend**, and **iden3_repo**  
    - Compile your Hardhat contracts in **iden3_repo**  
