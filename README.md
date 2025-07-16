@@ -23,12 +23,13 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 
 ### Setup Steps
 1. **Build and start all services**  
-   This single command will:
-   - Install dependencies for the **frontend**, **backend**, and **iden3_repo**
-   - Compile your Hardhat contracts in iden3_repo
+   # run the setup script
+   ./setup.sh
+
+   The `docker-compose` command is in a script for convenience. Running this will:
+   - Install dependencies for the **frontend**, **backend**, and **iden3_repo**  
+   - Compile your Hardhat contracts in **iden3_repo**  
    - Launch both client (port 3000) and server (port 5000)  
-   ```bash
-   docker-compose -f docker-compose.dev.yml up --build
 
 ## TODO
 - [x] Connect with MetaMask
