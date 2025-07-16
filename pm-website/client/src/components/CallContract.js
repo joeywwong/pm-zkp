@@ -633,7 +633,7 @@ export default function CallContract({ tokenListRef }) {
       </Box>
 
       <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Set Proof Request
+        Add Spending Condition
       </Typography>
 
       {/* JSON-LD Loader */}
@@ -838,11 +838,11 @@ export default function CallContract({ tokenListRef }) {
           }
           startIcon={isSettingSpendingCondition && <CircularProgress size={18} />}
         >
-          {isSettingSpendingCondition ? 'Setting…' : 'Set Spending Condition'}
+          {isSettingSpendingCondition ? 'Setting…' : 'Add Spending Condition'}
         </Button>
       </Stack>
 
-      {/* PM Contract Transaction Status */}
+      {/* PM contract Transaction Status */}
       {txHash && (
         <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#f9f9f9' }}>
           <Typography variant="body2">
@@ -862,9 +862,29 @@ export default function CallContract({ tokenListRef }) {
         </Paper>
       )}
 
+
+
       {/* Verifier Contract Transaction Status */}
       {(verifierTxHash || verifierTxStatus || verifierTxError) && (
-        <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#fffde7' }}>
+        <Paper
+          elevation={1}
+          sx={{
+            mt: 3,
+            p: 2,
+            bgcolor:
+              verifierTxStatus === 'Confirmed'
+                ? '#e8f5e9' // green
+                : verifierTxStatus === 'Error' || verifierTxStatus === 'Failed'
+                  ? '#ffebee' // red
+                  : '#fffde7', // yellow
+            transition: 'background-color 0.3s',
+          }}
+        >
+          {requestResult && (
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>{requestResult}</strong>
+            </Typography>
+          )}
           {verifierTxHash && (
             <Typography variant="body2">
               <strong>Tx Hash:</strong>{' '}
@@ -888,15 +908,6 @@ export default function CallContract({ tokenListRef }) {
               <strong>Error:</strong> {verifierTxError}
             </Typography>
           )}
-        </Paper>
-      )}
-
-      {/* Request Result Display */}
-      {requestResult && (
-        <Paper elevation={1} sx={{ mt: 3, p: 2, bgcolor: '#e8f5e9' }}>
-          <Typography variant="body2">
-            <strong>{requestResult}</strong>
-          </Typography>
         </Paper>
       )}
     </Paper>
