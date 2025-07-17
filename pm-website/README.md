@@ -50,10 +50,20 @@ PM contract
 - [x] Let user choose who must submit proof (sender / receiver) via dropdown, instead of manually entering a prover address
 - [x] Update token balances after minting token
 - [x] Update spending conditions on list of money after setting it
-- [ ] Reminder after successful money transfer
+- [x] Reminder after successful money transfer
 - [x] Show spending conditions above transfer button, e.g. birthday before 20250101
 - [x] Show token names over ID
-
+- [x] Redesign the layout of the token details card, to show more proof status and for better user experience and usability:
+  -[x] make the token details card full screen, to show more details.
+  -[x] put a 'x button' for closing the token details card, to replace the previous 'close' button
+  -[x] make the row of the token name and 'x' button blue, like a 'window bar', for better user experience
+  -[x] put the spending conditions status (the url for proof submission url, etc.) on the right (previously there are below the amount box), so that users don't need to scroll down to see them 
+  -[x] each spending condition is shown in a grey box, to separate them from background
+  -[x] change the color scheme of the remove button
+  -[x] put the remove spending condition button close to each spending condition 
+  -[x] if transfer success, show the transfer successful message and make the message box green
+  -[x] disable transfer button if the money receiver address and amount are not entered
+  -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
 ### Evaluation
 - [x] Record transaction gas fees in the database
 

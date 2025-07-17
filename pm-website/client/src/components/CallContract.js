@@ -558,7 +558,7 @@ export default function CallContract({ tokenListRef }) {
     <Paper elevation={3} sx={{ p: 3, maxWidth: 800, mx: 'auto', mt: 4 }}>
       {/* Mint Token Section (single form) */}
       <Typography variant="h5" gutterBottom>
-        Mint Token
+        Mint Token (For testing purposes, anyone can mint. In production, only the contract owner or the specific roles can mint.)
       </Typography>
       <Stack direction="row" spacing={2} mt={2}>
         <TextField
