@@ -26,6 +26,8 @@ import {
   AccordionDetails
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 
 const TokenList = forwardRef((props, ref) => {
   const [selectedTokenId, setSelectedTokenId] = useState(null);
@@ -36,6 +38,7 @@ const TokenList = forwardRef((props, ref) => {
   const [recipients, setRecipients] = useState({});
   const [amounts, setAmounts] = useState({});
   const [errors, setErrors] = useState({});
+  const [successes, setSuccesses] = useState({});
   const [proofStatuses, setProofStatuses] = useState({});
   const [loading, setLoading] = useState(true);
   const [transferring, setTransferring] = useState({});
@@ -218,6 +221,7 @@ const TokenList = forwardRef((props, ref) => {
   const handleTransfer = async (id) => {
     // Clear previous warning/error for this token
     setErrors(prev => ({ ...prev, [id]: null }));
+    setSuccesses(prev => ({ ...prev, [id]: null }));
     if (!signerContract || !account) {
       setErrors(prev => ({ ...prev, [id]: 'Connect wallet first' }));
       return;
@@ -330,10 +334,14 @@ const TokenList = forwardRef((props, ref) => {
         prev.map((b, i) => (tokenIds[i] === id ? newBal.toString() : b))
       );
       setErrors(prev => ({ ...prev, [id]: null }));
+      setSuccesses(prev => ({ ...prev, [id]: 'Transfer successful.' }));
     } catch (err) {
       // If any proof is not verified, show spending condition error
       if (proofNotVerified) {
-        setErrors(prev => ({ ...prev, [id]: 'Spending condition not verified.' }));
+        setErrors(prev => ({
+          ...prev,
+          [id]: "Transfer failed: Submit proof for all spending conditions below (see 'Spending condition status' for details/links). After submitting, try transferring again."
+        }));
       } else {
         // Otherwise, show short error message
         const msg = err.reason || err.errorArgs?.[1] || err.message;
@@ -412,237 +420,333 @@ const TokenList = forwardRef((props, ref) => {
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
         <Grow in={!!selectedTokenId} timeout={300}>
-          <Box sx={{ outline: 'none' }}>
+          <Box sx={{ outline: 'none', width: '100vw', height: '100vh', p: 0, m: 0 }}>
             {selectedTokenId && (
-              <Card elevation={6} sx={{ width: 420, maxWidth: '90vw', minHeight: 420, maxHeight: '95vh', p: 2, display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto', maxHeight: '80vh' }}>
-                  <Typography variant="h5" gutterBottom>
+              <Card
+                elevation={6}
+                sx={{
+                  width: '100vw',
+                  height: '100vh',
+                  borderRadius: 0,
+                  p: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {/* Header row: close button and token name, blue background */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    bgcolor: 'primary.main', // Use theme's primary blue
+                    color: 'primary.contrastText',
+                    minHeight: 64,
+                    px: 2,
+                    py: 1,
+                    borderTopLeftRadius: 0,
+                    borderTopRightRadius: 0,
+                  }}
+                >
+                  <IconButton
+                    aria-label="close"
+                    onClick={() => setSelectedTokenId(null)}
+                    sx={{
+                      color: 'primary.contrastText',
+                      mr: 2,
+                      background: 'transparent',
+                      '&:hover': { background: 'rgba(255,255,255,0.1)' }
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                  <Typography variant="h5" component="div" sx={{ fontWeight: 600, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {tokenNames[selectedTokenId] || 'Unnamed Token'}
                   </Typography>
-                  <Typography variant="subtitle1" gutterBottom>
-                    Token #{selectedTokenId}
-                  </Typography>
-                  <Typography variant="body1" sx={{ mb: 2 }}>
-                    Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
-                  </Typography>
-                  <Box sx={{ mb: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-                    {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
-                      <>
-                        <Typography variant="body2" sx={{ mb: 2 }}>Spending Conditions:</Typography>
-                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                          {spendingConditions[selectedTokenId].map((cond, idx) => {
-                            // ...existing code for rendering conditions and remove button...
-                            let opLabel = cond.operatorStr;
-                            if (operatorLabelMap[opLabel]) {
+                </Box>
+                <CardContent
+                  sx={{
+                    flexGrow: 1,
+                    display: 'flex',
+                    flexDirection: 'row',
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    maxHeight: '100vh',
+                    p: 4,
+                    gap: 4
+                  }}
+                >
+                  {/* Left column: token details and actions */}
+                  <Box sx={{ flex: '0 0 370px', maxWidth: 400, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Token #{selectedTokenId}
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
+                    </Typography>
+                    <Box sx={{ mb: 1, flexGrow: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                      {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
+                        <>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                            <Typography variant="body2" sx={{ mr: 2, mt: 0.5 }}>Spending Conditions:</Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                              {spendingConditions[selectedTokenId].map((cond, idx) => {
+                                let opLabel = cond.operatorStr;
+                                if (operatorLabelMap[opLabel]) {
+                                  opLabel = operatorLabelMap[opLabel];
+                                } else if ((opLabel || '').startsWith('$')) {
+                                  opLabel = opLabel.substring(1);
+                                } else if (!opLabel) {
+                                  opLabel = '';
+                                }
+                                let proverRole = '';
+                                if (cond.role === 'sender') {
+                                  proverRole = "Sender's";
+                                } else if (cond.role === 'receiver') {
+                                  proverRole = "Receiver's";
+                                } else {
+                                  proverRole = '';
+                                }
+                return (
+                  <Box key={cond.proofRequestId.toString()} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', borderRadius: 2, px: 2, py: 0.5, boxShadow: 1 }}>
+                    <Typography variant="body2" sx={{ mr: 1, fontWeight: 500 }}>
+                      {proverRole} {cond.attribute} {opLabel} {cond.value}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        '&:hover': { bgcolor: 'error.dark' },
+                        fontWeight: 600,
+                        px: 1.5,
+                        py: 0.2,
+                        borderRadius: 2,
+                        width: 90,
+                        minWidth: 90,
+                        maxWidth: 90,
+                        ml: 1
+                      }}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!signerContract || !account) {
+                          alert('Connect wallet and load contract first');
+                          return;
+                        }
+                        setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
+                        let gas_fee = 0;
+                        let startTime;
+                        let txHash;
+                        try {
+                          const provider = signerContract.runner?.provider || signerContract.provider;
+                          // Remove only user's own spending condition
+                          const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
+                          txHash = tx.hash;
+                          const pendingPromise = new Promise(resolve => {
+                            const onPending = hash => {
+                              if (hash === txHash) {
+                                startTime = Date.now();
+                                provider.off('pending', onPending);
+                                resolve();
+                              }
+                            };
+                            provider.on('pending', onPending);
+                            setTimeout(() => {
+                              if (!startTime) {
+                                startTime = Date.now();
+                                provider.off('pending', onPending);
+                                resolve();
+                              }
+                            }, 2000);
+                          });
+                          await pendingPromise;
+                          const receipt = await tx.wait();
+                          const endTime = Date.now();
+                          const runtime = ((endTime - startTime) / 1000).toFixed(3);
+                          // Calculate gas fee
+                          if (receipt && receipt.gasUsed) {
+                            // Try to use receipt.effectiveGasPrice first.
+                            // If not available, fallback to receipt.gasPrice.
+                            // Testnet may not have effectiveGasPrice.
+                            const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
+                            if (gasPrice) {
+                              gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
+                            }
+                          }
+                          // Logging to backend
+                          try {
+                            await fetch('http://localhost:5010/api/logTx', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                operation_name: 'remove_spending_condition',
+                                tx_hash: txHash,
+                                runtime,
+                                gas_fee
+                              })
+                            });
+                          } catch (e) {
+                            // Ignore logging errors
+                          }
+                          // Refresh spending conditions for this token
+                          try {
+                            const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
+                            const roles = [];
+                            for (let i = 0; i < scIds.length; i++) {
+                              const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
+                              roles.push(role);
+                            }
+                            const updated = scIds.map((scId, idx) => {
+                              const c = scArr[idx];
+                              const attribute = c.attribute || c[0] || '';
+                              const operatorStr = c.operatorStr || c[1] || '';
+                              const value = c.value || c[2] || '';
+                              const role = roles[idx] || '';
+                              return {
+                                proofRequestId: scId,
+                                attribute,
+                                operatorStr,
+                                value,
+                                role
+                              };
+                            });
+                            setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
+                          } catch {}
+                        } catch (err) {
+                          alert('Failed to remove spending condition: ' + (err.reason || err.message));
+                        } finally {
+                          setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
+                        }
+                      }}
+                      startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
+                      disabled={removing[cond.proofRequestId]}
+                    >
+                      {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
+                    </Button>
+                  </Box>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        </>
+                      ) : (
+                        <Typography variant="body2" sx={{ mb: 1 }} color="text.secondary">
+                          No spending conditions set for this token.
+                        </Typography>
+                      )}
+                    </Box>
+                    <Stack spacing={1.5} sx={{ mb: 1 }}>
+                      <TextField
+                        label="Recipient Address"
+                        value={recipients[selectedTokenId] || ''}
+                        onChange={e => handleRecipientChange(selectedTokenId, e.target.value)}
+                        size="small"
+                        fullWidth
+                      />
+                      <TextField
+                        label="Amount"
+                        type="number"
+                        inputProps={{ min: 0 }}
+                        value={amounts[selectedTokenId] || ''}
+                        onChange={e => handleAmountChange(selectedTokenId, e.target.value)}
+                        size="small"
+                        fullWidth
+                      />
+                    </Stack>
+                  </Box>
+                  {/* Right column: proof statuses */}
+                  <Box sx={{ flex: 1, minWidth: 0, maxWidth: '100%', overflowY: 'auto', pl: 4, display: 'flex', flexDirection: 'column' }}>
+                    {errors[selectedTokenId] && (
+                      <Alert severity="error" sx={{ mb: 2 }}>
+                        {errors[selectedTokenId]}
+                      </Alert>
+                    )}
+                    {successes[selectedTokenId] && !errors[selectedTokenId] && (
+                      <Alert severity="success" sx={{ mb: 2 }}>
+                        {successes[selectedTokenId]}
+                      </Alert>
+                    )}
+                    {proofStatuses[selectedTokenId] && (
+                      <Accordion defaultExpanded sx={{ mt: 0, mb: 2 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography variant="subtitle2">Spending condition status</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Divider sx={{ mb: 1 }} />
+                          {proofStatuses[selectedTokenId].map(ps => {
+                            // Find the matching spending condition for this proof status
+                            const cond = (spendingConditions[selectedTokenId] || []).find(c => c.proofRequestId.toString() === ps.requestId.toString());
+                            let opLabel = cond && cond.operatorStr;
+                            const operatorLabelMap = {
+                              '$eq': 'is equal to',
+                              '$ne': 'is not equal to',
+                              '$in': 'matches one of the values',
+                              '$nin': 'matches none of the values',
+                              '$lt': 'is less than',
+                              '$gt': 'is greater than',
+                            };
+                            if (opLabel && operatorLabelMap[opLabel]) {
                               opLabel = operatorLabelMap[opLabel];
-                            } else if ((opLabel || '').startsWith('$')) {
+                            } else if (opLabel && opLabel.startsWith('$')) {
                               opLabel = opLabel.substring(1);
                             } else if (!opLabel) {
                               opLabel = '';
                             }
                             let proverRole = '';
-                            if (cond.role === 'sender') {
+                            if (ps.role === 'sender') {
                               proverRole = "Sender's";
-                            } else if (cond.role === 'receiver') {
+                            } else if (ps.role === 'receiver') {
                               proverRole = "Receiver's";
                             } else {
-                              proverRole = '';
+                              proverRole = ps.role;
                             }
                             return (
-                              <li key={cond.proofRequestId.toString()} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                <div style={{ flex: 1 }}>
-                                  <Typography variant="body2" sx={{ mb: 0 }}>
-                                    Proof request ID: {cond.proofRequestId.toString()}
+                              <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
+                                <Typography variant="caption" display="block">
+                                  Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Request ID: {ps.requestId}
+                                </Typography>
+                                {cond && (
+                                  <Typography variant="caption" display="block">
+                                    Condition: {proverRole} {cond.attribute} {opLabel} {cond.value}
                                   </Typography>
-                                  <Typography variant="body2" sx={{ mb: 0 }}>
-                                    {proverRole} {cond.attribute} {opLabel} {cond.value}
+                                )}
+                                <Typography variant="caption" display="block" sx={{ color: ps.isVerified ? 'success.main' : 'error.main', fontWeight: 600 }}>
+                                  Verified: {ps.isVerified ? 'Yes' : 'No'}
+                                </Typography>
+                                {!ps.isVerified && ps.url && (
+                                  <Typography variant="caption" display="block">
+                                    URL:{' '}
+                                    <Link href={ps.url} target="_blank" rel="noopener noreferrer">
+                                      {ps.url}
+                                    </Link>
                                   </Typography>
-                                </div>
-                                <Button
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                  sx={{ ml: 2 }}
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!signerContract || !account) {
-                                      alert('Connect wallet and load contract first');
-                                      return;
-                                    }
-                                    setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
-                                    let gas_fee = 0;
-                                    let startTime;
-                                    let txHash;
-                                    try {
-                                      const provider = signerContract.runner?.provider || signerContract.provider;
-                                      // Remove only user's own spending condition
-                                      const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
-                                      txHash = tx.hash;
-                                      const pendingPromise = new Promise(resolve => {
-                                        const onPending = hash => {
-                                          if (hash === txHash) {
-                                            startTime = Date.now();
-                                            provider.off('pending', onPending);
-                                            resolve();
-                                          }
-                                        };
-                                        provider.on('pending', onPending);
-                                        setTimeout(() => {
-                                          if (!startTime) {
-                                            startTime = Date.now();
-                                            provider.off('pending', onPending);
-                                            resolve();
-                                          }
-                                        }, 2000);
-                                      });
-                                      await pendingPromise;
-                                      const receipt = await tx.wait();
-                                      const endTime = Date.now();
-                                      const runtime = ((endTime - startTime) / 1000).toFixed(3);
-                                      // Calculate gas fee
-                                      if (receipt && receipt.gasUsed) {
-                                        // Try to use receipt.effectiveGasPrice first.
-                                        // If not available, fallback to receipt.gasPrice.
-                                        // Testnet may not have effectiveGasPrice.
-                                        const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
-                                        if (gasPrice) {
-                                          gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
-                                        }
-                                      }
-                                      // Logging to backend
-                                      try {
-                                        await fetch('http://localhost:5010/api/logTx', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({
-                                            operation_name: 'remove_spending_condition',
-                                            tx_hash: txHash,
-                                            runtime,
-                                            gas_fee
-                                          })
-                                        });
-                                      } catch (e) {
-                                        // Ignore logging errors
-                                      }
-                                      // Refresh spending conditions for this token
-                                      try {
-                                        const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
-                                        const roles = [];
-                                        for (let i = 0; i < scIds.length; i++) {
-                                          const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
-                                          roles.push(role);
-                                        }
-                                        const updated = scIds.map((scId, idx) => {
-                                          const c = scArr[idx];
-                                          const attribute = c.attribute || c[0] || '';
-                                          const operatorStr = c.operatorStr || c[1] || '';
-                                          const value = c.value || c[2] || '';
-                                          const role = roles[idx] || '';
-                                          return {
-                                            proofRequestId: scId,
-                                            attribute,
-                                            operatorStr,
-                                            value,
-                                            role
-                                          };
-                                        });
-                                        setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
-                                      } catch {}
-                                    } catch (err) {
-                                      alert('Failed to remove spending condition: ' + (err.reason || err.message));
-                                    } finally {
-                                      setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
-                                    }
-                                  }}
-                                  startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
-                                  disabled={removing[cond.proofRequestId]}
-                                >
-                                  {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
-                                </Button>
-                              </li>
+                                )}
+                              </Box>
                             );
                           })}
-                        </ul>
-                      </>
-                    ) : (
-                      <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
-                        No spending conditions set for this token.
-                      </Typography>
+                        </AccordionDetails>
+                      </Accordion>
                     )}
                   </Box>
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Recipient Address"
-                      value={recipients[selectedTokenId] || ''}
-                      onChange={e => handleRecipientChange(selectedTokenId, e.target.value)}
-                      size="small"
-                      fullWidth
-                    />
-                    <TextField
-                      label="Amount"
-                      type="number"
-                      inputProps={{ min: 0 }}
-                      value={amounts[selectedTokenId] || ''}
-                      onChange={e => handleAmountChange(selectedTokenId, e.target.value)}
-                      size="small"
-                      fullWidth
-                    />
-                  </Stack>
-                  {errors[selectedTokenId] && (
-                    <Alert severity="error" sx={{ mt: 2 }}>
-                      {errors[selectedTokenId]}
-                    </Alert>
-                  )}
-                  {proofStatuses[selectedTokenId] && (
-                    <Accordion sx={{ mt: 2 }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="subtitle2">Proof Statuses</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Divider sx={{ mb: 1 }} />
-                        {proofStatuses[selectedTokenId].map(ps => (
-                          <Box key={`${ps.role}-${ps.requestId}`} sx={{ mb: 1, pl: 1 }}>
-                            <Typography variant="caption" display="block">
-                              Prover: {ps.role === 'sender' ? 'money sender' : ps.role === 'receiver' ? 'money receiver' : ps.role}
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Request ID: {ps.requestId}
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Verified: {ps.isVerified ? 'Yes' : 'No'}
-                            </Typography>
-                            {!ps.isVerified && ps.url && (
-                              <Typography variant="caption" display="block">
-                                URL:{' '}
-                                <Link href={ps.url} target="_blank" rel="noopener noreferrer">
-                                  {ps.url}
-                                </Link>
-                              </Typography>
-                            )}
-                          </Box>
-                        ))}
-                      </AccordionDetails>
-                    </Accordion>
-                  )}
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ p: 3 }}>
                   <Button
                     variant="contained"
                     color="primary"
                     fullWidth
                     onClick={e => { e.stopPropagation(); handleTransfer(selectedTokenId); }}
-                    disabled={transferring[selectedTokenId]}
+                    disabled={
+                      transferring[selectedTokenId] ||
+                      !recipients[selectedTokenId] ||
+                      !amounts[selectedTokenId]
+                    }
                     startIcon={transferring[selectedTokenId] && <CircularProgress size={18} />}
                   >
                     {transferring[selectedTokenId] ? 'Transferring...' : 'Transfer'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    fullWidth
-                    onClick={() => setSelectedTokenId(null)}
-                  >
-                    Close
                   </Button>
                 </CardActions>
               </Card>
