@@ -21,14 +21,17 @@ These instructions will get the development environment up and running on your l
 
 The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 27 gwei). Otherwise, most transactions will fail.
 
-### Setup Steps
-1. **Build and start all services**  
-   This single command will:
-   - Install dependencies for the **frontend**, **backend**, and **iden3_repo**
-   - Compile your Hardhat contracts in iden3_repo
-   - Launch both client (port 3000) and server (port 5000)  
-   ```bash
-   docker-compose -f docker-compose.dev.yml up --build
+### Setup Steps for PM-website
+1. **Build and start the dev build of PM-website**  
+  ```bash 
+  cd pm-website
+  ./run-dev.sh
+  ```
+
+   The `docker-compose` command is in the script `run-dev.sh` for convenience. Running this will:
+   - Install dependencies for the **frontend**, **backend**, and **iden3_repo**  
+   - Compile your Hardhat contracts in **iden3_repo**  
+   - Launch both client (port 3012) and server (port 5000)  
 
 ## TODO
 - [x] Connect with MetaMask
