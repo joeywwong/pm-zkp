@@ -40,6 +40,8 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract
 - [x] Remove spending conditions
+- [ ] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
+- [ ] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
@@ -62,7 +64,13 @@ PM contract
   -[x] if transfer success, show the transfer successful message and make the message box green
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
-### Evaluation
+- [ ] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
+- [ ] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
+
+### Database for logging
+- [ ] Save sensitve info (e.g. spending condition 'birthday < 19901231) on DB, instead of smart contract/blockchain, and use request id as the key of the spending conditions
+
+### Get data for Eevaluation from website
 - [x] Record transaction gas fees in the database
 
 
