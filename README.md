@@ -47,12 +47,15 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
 - [x] Remove spending conditions
+- [ ] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
+- [ ] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
 - [x] One function for minting new token or existing token, instead of two functions
 - [x] A variable to store spending conditions for each token, so GUI can show them
 - [x] Spending conditions is for money sender or receiver, not for a specific address, so in GUI user can select if sender or receiver is the prover, not inputing the prover's address
+- [ ] Remove variables which save sensitive infomation
 
 ### GUI fix
 - [x] Integrate a React UI library (e.g., Material-UI) and refactor basic HTML elements to styled components
@@ -75,6 +78,13 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
   -[x] if transfer success, show the transfer successful message and make the message box green
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
+- [ ] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
+- [ ] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
+
+### Database for logging
+- [ ] Save sensitve info (e.g. spending condition 'birthday < 19901231) on DB, instead of smart contract/blockchain, and use request id as the key of the spending conditions
 
 ### Evaluation
 - [x] Record transaction gas fees in the database
+- [ ] Plot the gas fee statistics, draw some conclusions, show it in fiat, e.g. Euro
+- [ ] Record proof generation time using Selenium, or record the proof generation time of Privado ID's JS-SDK
