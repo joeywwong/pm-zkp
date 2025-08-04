@@ -1,0 +1,173 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[english]{babel}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}    % for \llbracket … \rrbracket
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{fancyhdr} % Required for the header
+\usepackage[paper=a4paper,headsep = 25mm]{geometry}
+\usepackage[normalem]{ulem}
+\usepackage{geometry}
+\useunder{\uline}{\ul}{}
+\usepackage{hyperref}
+ \geometry{
+ a4paper,
+ total={150mm,220mm},
+ left=30mm,
+ top=45mm,
+ bottom=45mm
+ }
+
+\usepackage{titlesec}
+
+%set up your sections' font sizes
+\usepackage{sectsty}
+\usepackage{float}
+\sectionfont{\huge}
+\subsectionfont{\Large}
+\subsubsectionfont{\large}
+\paragraphfont{\normalsize}
+
+\newcommand*\smarthspace[1]{%
+    \ifhmode
+        \hspace{#1}%
+    \fi
+}
+
+% write the provisional title of your thesis
+\newcommand{\docTitle}[0]{Implementation and Evaluation of Programmable Money Using Verifiable Credentials and Zero-Knowledge Proofs} 
+% write your name
+\newcommand{\docAuthor}[0]{Yat Wai Wong} 
+% write the date of submission
+\date{13th Dec 2024} 
+\newcommand{\docDate}[0]{Date} 
+% write your supervisor's name
+\newcommand{\docSupervisor}[0]{Prof. Wolfgang Prinz, PhD\\Prof. Stefan Decker, PhD}
+
+% % write your co-supervisor's name
+%\newcommand{\docCoSupervisor}[0]{Prof. Name M. Last} 
+
+% Set up the header
+\pagestyle{fancy}
+\fancyhead{}
+% \fancyhead[L]{\includegraphics[height=12mm]{images/JDPLS_HeaderFooter.png}} % Left side logo
+% \fancyhead[R]{\docDate} % Right side date
+
+\usepackage[
+backend=biber,
+style=alphabetic,
+]{biblatex}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\addbibresource{references.bib}
+\begin{document}
+\include{Sections/0.titlepage}
+\tableofcontents
+\newpage
+\section{Things to be included in the report} \label{Introduction}
+-Third party library cannot be controlled, e.g., \\
+sometimes metamask not working\\
+sometimes privado not working\\
+-Using Privado's web wallet to generate proof: no way to log proof generation time, e.g. no api for that, cannot change their code.\\
+possible solution to track proof generation time is to use selenium\\
+-using metamask vs transaction done on backend: users trust metamask vs trust our backend
+
+\section{Zero-Knowledge Proofs}\label{sec:zkp}
+A Zero-Knowledge Proof (ZKP) \cite{zkp85} is a protocol that allows one party (the prover $P$) to prove to another party (the verifier $V$) that a statement is true, without revealing any information beyond the fact that the statement is indeed true. In other words, the prover can convince the verifier that they possess certain knowledge or have performed a specific computation correctly, without disclosing the actual details of that knowledge or computation. Schnorr's protocol is one of the examples, and protocols having the structure of Schnorr's protocol (the `3 moves' structure) are called $\Sigma$ protocols. The main properties of ZKP are completeness, soundness, zero-knowledge, and knowledge soundness. In some applications using non-interactive ZKP, a relaxed zero-knowledge (\textit{special honest-verifier zero-knowledge}) suffices, and the non-interactive version of ZKP is achieved by Fiat-Shamir transformation \cite{FS} in random oracle model \cite{RO}.\\
+\\
+Using $\Sigma$ protocol as an example, ZKP is defined as follows:\\
+\begin{definition}[NP Relation]
+Let \(R \subseteq \{0,1\}^* \times \{0,1\}^*\) be an NP relation (it can be evaluated in polynomial time), $x \in \{0,1\}^*$ be the statement, and $w\in\{0,1\}^*$ be the witness for the statement $x$. We define the language $L_R$ for the relation as:
+\[
+ L_R \;:=\; \{\,x : \exists\,w,\,(x,w)\in R\}.
+\]
+In other words, $x \in L_R$ iff there exists a witness for $x$. This can also be denoted as $(x,w)\in R$ or $R(x,w)=1$.
+\end{definition}
+
+\begin{definition}[Proof System]
+A proof system for \(R\) is an interactive protocol between a prover \(P\) and a verifier \(V\) for the relation $R$. The interaction between $P$ (with $x,w$ as its input) and $V$ (with $x$ as its input) is denoted as $\langle P(x,w),V(x)\rangle$. After interaction, $V$ outputs a bit $b$ to decide whether to accept or reject, denoted as: 
+\[
+\text{accept or reject} \leftarrow \langle P(x,w),V(x)\rangle 
+\].
+\end{definition}
+
+\begin{definition}[3-move structure]
+  \(\Sigma\)-protocol follows a specific 3-move structure:
+    \item \textbf{Commitment:} The prover computes an initial message, the commitment \(t\), and sends it to the verifier.
+    \item \textbf{Challenge:} The verifier generates a random challenge \(chal\) from a challenge space ($chal \xleftarrow{\$} \mathbin{C}$) and sends it to the prover.
+    \item \textbf{Response:} The prover computes a response \(resp\) based on their witness $w$, the commitment $t$, and the challenge $chal$, and sends it to the verifier. The verifier then checks if \(resp\) is valid with respect to $t$ and $chal$.
+\end{definition}
+
+\begin{definition}[Completeness] This property ensures that an honest prover with a valid witness can always convince an honest verifier. For every valid statement-witness pair \((x,w)\in R\), the probability that the verifier accepts the proof should be overwhelming:
+  \[
+    \Pr\bigl[\text{accept} \leftarrow \langle P(x,w), V(x)\rangle\bigr]
+    \;\ge\; 1 - \mathsf{negl_{completeness}}(\lambda).
+  \]
+  Here, $\mathsf{negl}(\lambda)$ denotes a negligible function for the completeness property, and $\lambda \in \mathbb{N}$ is the security parameter of the protocol. In the perfect completeness case, this probability equals 1, meaning the honest verifier always accepts a valid proof from an honest prover.
+\end{definition}
+
+\begin{definition}[Soundness] This property ensures that no malicious prover can convince an honest verifier to accept a false statement. For every statement \(x\notin L_R\) (i.e., statements for which no valid witness exists) and every computationally bounded cheating prover \(P^*\), the probability that the verifier accepts should be negligible:
+  \[
+    \Pr\bigl[\text{accept} \leftarrow \langle P^*(x), V(x)\rangle\bigr]
+    \;\le\; \mathsf{negl_{soundness}}(\lambda).
+  \]
+ In the perfect soundness case, this probability is exactly 0.
+\end{definition}
+\begin{definition}[Zero-Knowledge] This property ensures that all polynomial-time verifiers $V^*$ (possibly malicious, e.g. pick challenge adaptively) learns nothing about $w$ and beyond the validity of the statement $x$. More precisely, for all $V^*$ there exists a PPT simulator $S$ that produces a transcript without accessing $w$, that is statistically indistinguishable from a accepting transcript from the interaction between $P$ and $V$:
+  \[
+  SD(\langle P(x,w),V^*(x)\rangle , S(x))\leq \mathsf{negl_{zk}}(\lambda).
+  \]
+  $SD(\langle P(x,w),V^*(x)\rangle , S(x))$ is the statistical distance between the distribution of the real interaction view (which includes all messages exchanged) and the trascript from the simulator.
+\end{definition}
+
+\begin{definition}[Special Honest-Verifier Zero-Knowledge (SHVZK)]
+A relaxed version of zero-knowledge. For all honest $V$, which follows the protocol faithfully, e.g. pick the challenge uniformly at random, there exists a PPT simulator $S$ which, given $x$, can produce a simulated transcript that is indistinguishable from the real one.
+
+SHVZK is sufficient in some cases, e.g. the ZKP protocol is transformed into non-interactive zero-knowledge (NIZK) proofs in the random oracle model \cite{RO} using the Fiat-Shamir heuristic \cite{FS}.
+\end{definition}
+
+\begin{definition}[Knowledge Soundness] If a prover \(P^*\) can convince $V$ to accept a statement \(x \in L_R\) with non-negligible probability, then \(P^*\) must `know' the corresponding witness \(w\). Formally, for any such successful prover \(P^*\), there exists a PPT `knowledge extractor' algorithm \(E\) that takes accepting transcripts $\langle P^*(x,w_i),V(x)\rangle$ as input, and output the witness \(w'\) such that \((x,w') \in R'\). The extractor is given oracle access to the transcripts and can `rewind' the interaction between $P^*$ and $V$ to the point before $V$ generates and sends the random challenge, to get the fresh randomness from $V$:
+  \[
+  \Pr\bigl[(x,w') \in R'| w' \leftarrow E^O(x)\bigr]
+  \;\ge\; \Pr\bigl[\text{accept} \leftarrow \langle P^*(x,w), V(x)\rangle\bigr] - \kappa.
+  \]
+  Here, \(\kappa \in negl(\lambda)\) is the soundness error, and $O:=\langle P^*(x,w_i),V(x)\rangle$. This ensures that a valid proof can only be generated by a party who genuinely possesses the secret information.
+\end{definition}
+
+\begin{definition}[Non-interactivity] Fiat-Shamir heuristic \cite{FS} is a method to transform an interactive proof system into a non-interactive one in the random oracle model \cite{RO}, i.e $P$ can generate a proof without any interaction with $V$, and $V$ can check the proof independently. For example, in Schnorr's protocol, the prover can compute the challenge $chal$ using a hash function (modeled as a random oracle) on the commitment $t$, the generator $g$, and the public information $g^x$, and sends the response $resp$ directly to $V$ without waiting for a challenge from $V$.
+\end{definition}
+
+\section{zkSNARKs}
+While the previous section laid out the properties of ZKP, some practical applications, including ZKP on blockchain, require an efficient ZKP system with small (or succinct) proof sizes. This leads us to the concept of zkSNARG proposed by Kilian \cite{succinct}, which stands for \emph{zero-knowledge Succinct Non-interactive ARGument}.\\
+
+In addition to the definitions in section \ref{sec:zkp}, A zkSNARG is a special type of argument system that has the following properties:
+
+\begin{definition}[Argument System]
+An argument system $\Pi=(\mathsf{Setup}, P, V)$ consists of a PPT setup algorithm $\mathsf{Setup}$, an interactive PPT prover $P$, and an interactive PPT verifier $V$. $\mathsf{Setup}$ generates a common reference string $\mathsf{crs} \leftarrow \mathsf{Setup}(1^\lambda)$. The interaction between $P$ (with $\mathsf{crs},x,w$ as its input) and $V$ (with $\mathsf{crs},x$ as its input) is denoted as $\langle P(\mathsf{crs},x,w),V(\mathsf{crs},x)\rangle$. After interaction, $V$ outputs a bit $b$ to decide whether to accept or reject, denoted as: 
+\[
+\text{accept or reject} \leftarrow \langle P(\mathsf{crs},x,w),V(\mathsf{crs},x)\rangle 
+\].
+\end{definition}
+
+\begin{definition}[Succinctness] The proof size is short and verification time is fast (w.r.t. to $\lambda$, $x$, $w$). More formally:
+    \begin{itemize}
+        \item The communication size is polylogarithmic in the size of $w$, i.e. \(O(\text{poly}(\lambda, \log|w|))\).
+        \item The verification time is polylogarithmic in the size of $x$, $w$, i.e. \(O(\text{poly}(\lambda, |x|, \log|w|))\).
+    \end{itemize}
+\end{definition}
+
+\begin{definition}[Non-interactivity] Typically, an argument system can be transformed into a non-interactive version using Fiat-Shamir heuristic \cite{FS} in the random oracle model.  
+\end{definition}
+
+\begin{definition}[zkSNARK]If a zkSNARG is also knowledge sound, it is called a zkSNARK (\emph{zero-knowledge Succinct Non-Interactive ARgument of Knowledge}), which in this context is often referred to as an \emph{Argument of Knowledge}.
+\end{definition}
+
+These properties make zk-SNARKs highly suitable for applications like blockchain scaling solutions, private transactions, and verifiable computation, where efficiency and scalability are critical. One of the most well-known and widely deployed zk-SNARK constructions is Groth16 \cite{groth16}, where the proof is composed of three group elements/points on elliptic curves, and the verification time is fast, which is a single equation computing three pairings.
+
+\printbibliography
+
+\end{document}
