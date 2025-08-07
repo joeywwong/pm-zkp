@@ -57,8 +57,8 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 - [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
 - [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
 - [x] Remove spending conditions
-- [ ] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
-- [ ] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
+- [x] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
+- [x] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
@@ -88,7 +88,7 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
   -[x] if transfer success, show the transfer successful message and make the message box green
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
-- [ ] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
+- [x] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
 - [ ] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
 
 ### Database for logging
