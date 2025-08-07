@@ -661,7 +661,15 @@ export default function CallContract({ tokenListRef }) {
           url={jsonLdUrl}
           setUrl={setJsonLdUrl}
           onData={data => {
+            // Set raw JSON-LD or clear dependent state on null
             setJsonLD(data);
+            if (!data) {
+              setCredentialNames([]);
+              setSelectedSchema('');
+              setAttributeNames([]);
+              setSelectedAttribute('');
+              return;
+            }
             const ctx = (data['@context'] && data['@context'][0]) || {};
             const names = Object.entries(ctx)
               .filter(([key, val]) => typeof val === 'object')
