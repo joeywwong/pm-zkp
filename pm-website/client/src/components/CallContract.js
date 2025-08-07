@@ -408,6 +408,21 @@ export default function CallContract({ tokenListRef }) {
           value: filterValue
         };
 
+        // Fetch recommended gas fee. 
+        // Default to 30 gwei if fetch fails
+        // This is a reasonable default for Polygon mainnet and testnets.
+        // P.S. On Polygon PoS mainnet, it is mandatory to pass a minimum priority fees of 30 gwei.
+        // see https://docs.polygon.technology/tools/gas/polygon-gas-station/
+        let recommendedFee = 30;
+        try {
+          const gasResponse = await fetch('https://gasstation.polygon.technology/amoy');
+          const gasData = await gasResponse.json();
+          // Use fast.maxPriorityFee and add 5
+          recommendedFee = gasData.fast.maxPriorityFee + 5;
+        } catch (err) {
+          console.error('Failed to fetch gas fee:', err);
+        }
+
         try {
           const tx = await signerContract.addProofRequest_VerifierAndPM(
             requestIdBN,
@@ -416,7 +431,11 @@ export default function CallContract({ tokenListRef }) {
             bytesData,
             tokenId,
             role,
-            condition
+            condition,
+            {
+             maxPriorityFeePerGas: ethers.parseUnits(recommendedFee.toString(), 'gwei'),
+             maxFeePerGas: ethers.parseUnits(recommendedFee.toString(), 'gwei'),
+            }
           );
           setVerifierTxHash(tx.hash);
           setVerifierTxStatus('Pending...');
