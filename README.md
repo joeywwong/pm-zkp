@@ -17,9 +17,8 @@ These instructions will get the development environment up and running on your l
 - **npm**
 - **Docker** & **Docker Compose**
 
-### (Important) Note for MetaMask transactions on Polygon Amoy
-
-The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 27 gwei). Otherwise, most transactions will fail.
+### (Important) Note for MetaMask transactions on Polygon Amoy and mainnet
+The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 30 gwei). Otherwise, most transactions will fail.
 
 ### Setup Steps for PM-website
 1. **Build and start the dev build of PM-website**  
@@ -32,6 +31,9 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
    - Install dependencies for the **frontend**, **backend**, and **iden3_repo**  
    - Compile your Hardhat contracts in **iden3_repo**  
    - Launch both client (port 3012) and server (port 5000)  
+
+### Tx fee history website
+Test it on http://localhost:5010/chart.html
 
 ## TODO
 - [x] Connect with MetaMask
@@ -80,12 +82,13 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
 - [x] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
-- [x] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
+- [x] Put the minting and the addition of spending condition function in other pages, and add buttons navigate to them
 
 ### Database for logging
 - [ ] Save sensitve info (e.g. spending condition 'birthday < 19901231) on DB, instead of smart contract/blockchain, and use request id as the key of the spending conditions
 
 ### Evaluation
 - [x] Record transaction gas fees in the database
-- [ ] Plot the gas fee statistics, draw some conclusions, show it in fiat, e.g. Euro
+- [x] Plot the tx fee statistics, show it in fiat, e.g. Euro (coin price fetched from coingecko's api)
+- [ ] Write some conclusions for the tx fee
 - [ ] Record proof generation time using Selenium, or record the proof generation time of Privado ID's JS-SDK
