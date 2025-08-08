@@ -80,7 +80,7 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
 - [x] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
-- [ ] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
+- [x] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
 
 ### Database for logging
 - [ ] Save sensitve info (e.g. spending condition 'birthday < 19901231) on DB, instead of smart contract/blockchain, and use request id as the key of the spending conditions
