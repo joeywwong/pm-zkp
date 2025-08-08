@@ -1,8 +1,8 @@
 version: "3.8"
 services:
   client:
-    container_name: client-no-admin
-    image: client-no-admin
+    container_name: client-multi-pages
+    image: client-multi-pages
     build:
       context: ./client
       dockerfile: Dockerfile.dev
@@ -11,14 +11,14 @@ services:
       - ./client/public:/app/public
     #  - /app/node_modules
     ports:
-      - "3012:3000"
+      - "3013:3000"
     environment:
     - WATCHPACK_POLLING=true    # ensure file changes are detected
     - HOST=0.0.0.0              # bind dev server to all interfaces
 
   server:
-    container_name: server-no-admin
-    image: server-no-admin
+    container_name: server-multi-pages
+    image: server-multi-pages
     build:
       context: ./server
       dockerfile: Dockerfile.dev
