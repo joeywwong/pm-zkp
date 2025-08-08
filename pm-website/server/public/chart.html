@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Fee Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            width: 90%;
+            margin: auto;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .period-btn {
+            background-color: #f0f0f0;
+            border: 2px solid #ddd;
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .period-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .period-btn.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Transaction Fees Over Time</h2>
+        
+        <div class="controls">
+            <button class="period-btn active" onclick="changePeriod('24h')">24 Hours</button>
+            <button class="period-btn" onclick="changePeriod('30d')">30 Days</button>
+            <button class="period-btn" onclick="changePeriod('1y')">1 Year</button>
+            <button class="period-btn" onclick="changePeriod('all')">All Time</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="feeChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let currentPeriod = '24h';
+
+        function formatTimestamp(timestamp, period) {
+            const date = new Date(timestamp);
+            
+            switch(period) {
+                case '24h':
+                    return date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                case '30d':
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit'
+                    });
+                case '1y':
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric'
+                    });
+                case 'all':
+                default:
+                    return date.toLocaleDateString('en-US', { 
+                        year: 'numeric',
+                        month: 'short', 
+                        day: 'numeric'
+                    });
+            }
+        }
+
+        async function fetchAndPlotData(period = '24h') {
+            try {
+                const response = await fetch(`/api/txFees?period=${period}`);
+                const result = await response.json();
+                const data = result.data;
+
+                if (data.length === 0) {
+                    console.warn('No data available for the selected period');
+                    return;
+                }
+
+                // Extract labels and fee data with proper time formatting
+                const labels = data.map(item => formatTimestamp(item.timestamp, period));
+                const feesInPol = data.map(item => parseFloat(item.gas_fee) || 0);
+                const feesInEur = data.map(item => parseFloat(item.gas_fee_eur) || 0);
+                const operationNames = data.map(item => item.operation_name);
+                const polPrices = data.map(item => item.pol_price);
+
+                // Destroy existing chart if it exists
+                if (chart) {
+                    chart.destroy();
+                }
+
+                // Create the chart with dual y-axis
+                const ctx = document.getElementById('feeChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'TX Fee (POL)',
+                                data: feesInPol,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                tension: 0.4,
+                                pointBackgroundColor: 'rgb(75, 192, 192)',
+                                pointBorderColor: 'rgb(75, 192, 192)',
+                                pointHoverBackgroundColor: 'rgb(255, 99, 132)',
+                                pointHoverBorderColor: 'rgb(255, 99, 132)',
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'TX Fee (EUR)',
+                                data: feesInEur,
+                                borderColor: 'rgb(255, 159, 64)',
+                                backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                                tension: 0.4,
+                                pointBackgroundColor: 'rgb(255, 159, 64)',
+                                pointBorderColor: 'rgb(255, 159, 64)',
+                                pointHoverBackgroundColor: 'rgb(255, 99, 132)',
+                                pointHoverBorderColor: 'rgb(255, 99, 132)',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'TX Fee (POL)'
+                                },
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'TX Fee (EUR)'
+                                },
+                                grid: {
+                                    drawOnChartArea: true,
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: period === '24h' ? 'Time (Hour:Minute)' : 
+                                          period === '30d' ? 'Date' : 
+                                          period === '1y' ? 'Date' : 'Date'
+                                },
+                                ticks: {
+                                    maxTicksLimit: period === '24h' ? 12 : 
+                                                  period === '30d' ? 10 : 
+                                                  period === '1y' ? 12 : 15
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Transaction Fees - ${period.toUpperCase()}`
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    beforeTitle: function(context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        return `Operation: ${operationNames[dataIndex]}`;
+                                    },
+                                    label: function(context) {
+                                        const dataIndex = context.dataIndex;
+                                        const datasetIndex = context.datasetIndex;
+                                        
+                                        if (datasetIndex === 0) {
+                                            // POL dataset
+                                            return `TX Fee: ${feesInPol[dataIndex]} POL`;
+                                        } else {
+                                            // EUR dataset
+                                            return `TX Fee: €${feesInEur[dataIndex]}`;
+                                        }
+                                    },
+                                    afterLabel: function(context) {
+                                        // Show POL price only once (for the first dataset)
+                                        if (context.datasetIndex === 0) {
+                                            const dataIndex = context.dataIndex;
+                                            return `POL Price: €${polPrices[dataIndex].toFixed(4)}`;
+                                        }
+                                        return '';
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function changePeriod(period) {
+            // Update active button
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentPeriod = period;
+            fetchAndPlotData(period);
+        }
+
+        // Load the chart when page loads
+        fetchAndPlotData('24h');
+    </script>
+</body>
+</html>
