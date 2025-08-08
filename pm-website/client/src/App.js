@@ -22,11 +22,12 @@ import {
   Stack
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import TokenIcon from '@mui/icons-material/Token';
-import SettingsIcon from '@mui/icons-material/Settings';
+// import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ListIcon from '@mui/icons-material/List';
 
-// Navigation component inside App.js
+// Navigation component now integrated into the AppBar
 function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,37 +41,43 @@ function Navigation() {
     {
       path: '/mint',
       label: 'Mint Token',
-      icon: <TokenIcon />,
+      icon: <MonetizationOnIcon />,
     },
     {
       path: '/spending-conditions',
       label: 'Add Spending Conditions',
-      icon: <SettingsIcon />,
+      icon: <AddCircleOutlineIcon />,
     }
   ];
 
   return (
-    <Box sx={{ p: 2, backgroundColor: '#f9f9f9', borderBottom: '1px solid #ddd' }}>
-      <Stack 
-        direction="row" 
-        spacing={2} 
-        justifyContent="center"
-        sx={{ flexWrap: 'wrap', gap: 2 }}
-      >
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant={location.pathname === item.path ? 'contained' : 'outlined'}
-            color="primary"
-            startIcon={item.icon}
-            onClick={() => navigate(item.path)}
-            sx={{ minWidth: 180 }}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </Stack>
-    </Box>
+    <Stack 
+      direction="row" 
+      spacing={1} 
+      sx={{ ml: 2 }}
+    >
+      {navItems.map((item) => (
+        <Button
+          key={item.path}
+          variant={location.pathname === item.path ? 'contained' : 'text'}
+          color={location.pathname === item.path ? 'secondary' : 'inherit'}
+          startIcon={item.icon}
+          onClick={() => navigate(item.path)}
+          sx={{ 
+            minWidth: 120,
+            color: 'white',
+            '&.MuiButton-contained': {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              }
+            }
+          }}
+        >
+          {item.label}
+        </Button>
+      ))}
+    </Stack>
   );
 }
 
@@ -85,24 +92,26 @@ function AppContent() {
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Typography variant="h6">
             PM Website
           </Typography>
+          
+          {/* Navigation in the center */}
+          <Navigation />
+          
+          {/* Connection status/button on the right */}
           {!account ? (
             <Button color="inherit" variant="outlined" onClick={connect}>
               Connect MetaMask
             </Button>
           ) : (
-            <Typography variant="body1" sx={{ ml: 2 }}>
+            <Typography variant="body1">
               Connected: {address_string}
             </Typography>
           )}
         </Toolbar>
       </AppBar>
-      
-      {/* Navigation */}
-      <Navigation />
       
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Routes>
