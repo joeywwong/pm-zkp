@@ -24,7 +24,8 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
    - Compile your Hardhat contracts in **iden3_repo**  
    - Launch both client (port 3013) and server (port 5000)  
 
-### Tx fee history website
+# Tx fee history website
+Shows the tx fee of the past 24H, 30H, 1Y, and all time.
 Test it on http://localhost:5010/chart.html
 
 # Privado ID Issuer Node UI (the website for credentials issuance)
