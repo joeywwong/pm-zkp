@@ -1,14 +1,6 @@
 # PM-ZKP
-
-# Privado ID Issuer Node UI (the website for credentials issuance)
-To set up the website, please refer to the official documentation:
-https://docs.privado.id/docs/issuer/setup-issuer-ui/
-
 # PM-website
-See below instruction before running the website.
-
 ## Getting started
-
 These instructions will get the development environment up and running on your local machine.
 
 ### Prerequisites
@@ -34,6 +26,13 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 
 ### Tx fee history website
 Test it on http://localhost:5010/chart.html
+
+# Privado ID Issuer Node UI (the website for credentials issuance)
+To build the issuer website, clone :
+https://github.com/0xPolygonID/issuer-node
+
+and refer to the official documentation:
+https://docs.privado.id/docs/issuer/setup-issuer-ui/
 
 ## TODO
 ### Final report
