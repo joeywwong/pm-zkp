@@ -13,8 +13,8 @@ These instructions will get the development environment up and running on your l
 The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 30 gwei). Otherwise, most transactions will fail.
 
 ### Setup Steps for PM-website
-1. **Build and start the dev build of PM-website**  
-  ```bash 
+1. **Build and start the dev build of PM-website** 
+  ```bash
   cd pm-website
   ./run-dev.sh
   ```
@@ -58,16 +58,16 @@ https://docs.privado.id/docs/issuer/setup-issuer-ui/
 - [x] Show spending conditions above transfer button, e.g. birthday before 20250101
 - [x] Show token names over ID
 - [x] Redesign the layout of the token details card, to show more proof status and for better user experience and usability:
-  -[x] make the token details card full screen, to show more details.
-  -[x] put a 'x button' for closing the token details card, to replace the previous 'close' button
-  -[x] make the row of the token name and 'x' button blue, like a 'window bar', for better user experience
-  -[x] put the spending conditions status (the url for proof submission url, etc.) on the right (previously there are below the amount box), so that users don't need to scroll down to see them 
-  -[x] each spending condition is shown in a grey box, to separate them from background
-  -[x] change the color scheme of the remove button
-  -[x] put the remove spending condition button close to each spending condition 
-  -[x] if transfer success, show the transfer successful message and make the message box green
-  -[x] disable transfer button if the money receiver address and amount are not entered
-  -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
+  - [x] make the token details card full screen, to show more details.
+  - [x] put a 'x button' for closing the token details card, to replace the previous 'close' button
+  - [x] make the row of the token name and 'x' button blue, like a 'window bar', for better user experience
+  - [x] put the spending conditions status (the url for proof submission url, etc.) on the right (previously there are below the amount box), so that users don't need to scroll down to see them 
+  - [x] each spending condition is shown in a grey box, to separate them from background
+  - [x] change the color scheme of the remove button
+  - [x] put the remove spending condition button close to each spending condition 
+  - [x] if transfer success, show the transfer successful message and make the message box green
+  - [x] disable transfer button if the money receiver address and amount are not entered
+  - [x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
 - [x] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
 - [x] Put the minting and the addition of spending condition function in other pages, and add buttons navigate to them
 - [ ] Add 2 to 3 more credentials schemas in the dropdown list, with name, semantics, easy for user to understand, not URL.
