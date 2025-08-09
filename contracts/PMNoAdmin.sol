@@ -14,8 +14,13 @@ contract PMNoAdmin is ERC1155, Ownable {
     address[] private admins;
 
     // Getter function for the admins array, only callable by the owner.
-    function getAdmins() public view onlyOwner returns (address[] memory) {
+    function getAdmins() external view onlyOwner returns (address[] memory) {
         return admins;
+    }
+
+    // Public helper to query admin status without exposing the array
+    function isAdmin(address _admin) external view returns (bool) {
+        return _isAdmin(_admin);
     }
 
     // Internal helper function to check if an address is an admin.
@@ -29,14 +34,14 @@ contract PMNoAdmin is ERC1155, Ownable {
     }
 
     // Function to add an admin address. Only the owner can add.
-    function addAdmin(address _admin) public onlyOwner {
+    function addAdmin(address _admin) external onlyOwner {
         require(_admin != address(0), "Invalid address");
         require(!_isAdmin(_admin), "Address is already an admin");
         admins.push(_admin);
     }
 
     // Function to remove an admin address. Only the owner can remove.
-    function removeAdmin(address _admin) public onlyOwner {
+    function removeAdmin(address _admin) external onlyOwner {
         uint len = admins.length;
         for (uint i = 0; i < len; i++) {
             if (admins[i] == _admin) {
@@ -64,13 +69,12 @@ contract PMNoAdmin is ERC1155, Ownable {
         return _allTokenIDs.values();
     }
 
-    // Mapping from token ID to its name. But the token name and other attributes can be stored as uri 
+    // Mapping from token ID to its name. Token name is okay as public metadata.
     mapping(uint256 => string) public tokenName;
 
-
-    // Mapping from tokenID to proof_request_id to prover's role (a string 'sender' or 'receiver').
-    // tokenID → (proofRequestID → 'sender' or 'receiver')
-    mapping(uint256 => mapping(uint64 => string)) public tokenID_proofRequest_role;
+    // tokenID → (setter → (proofRequestID → 'sender' or 'receiver'))
+    // Sensitive; keep private and expose via controlled views if needed.
+    mapping(uint256 => mapping(address => mapping(uint64 => string))) private tokenID_requestSetter_proofRequest_role;
 
     // Struct to represent a spending condition
     struct SpendingCondition {
@@ -79,15 +83,20 @@ contract PMNoAdmin is ERC1155, Ownable {
         string value;
     }
 
-    // Mapping from tokenID to user address to proofRequestID to spending condition
     // tokenID => (moneyOwnerAddress => (proofRequestID => SpendingCondition))
-    mapping(uint256 => mapping(address => mapping(uint64 => SpendingCondition))) public spendingConditions;
+    // Sensitive; keep private and expose via controlled views.
+    mapping(uint256 => mapping(address => mapping(uint64 => SpendingCondition))) private spendingConditions;
 
-    // An array to store proof_request_ids only for iteration.
-    uint64[] public proofRequestIDs;
+    // Store proof_request_ids only for iteration; keep private.
+    uint64[] private proofRequestIDs;
     
     /// @notice Get all spending conditions for a given tokenID and user
+    /// Access: only the user themselves, contract owner, or admins.
     function getSpendingConditions(uint256 tokenID, address user) external view returns (uint64[] memory, SpendingCondition[] memory) {
+        require(
+            msg.sender == user || msg.sender == owner() || _isAdmin(msg.sender),
+            "Not authorized"
+        );
         uint64[] memory ids = proofRequestIDs;
         uint256 count = 0;
         // First, count how many proofRequestIDs are associated with this tokenID for this user
@@ -110,19 +119,17 @@ contract PMNoAdmin is ERC1155, Ownable {
         return (filteredIDs, conditions);
     }
 
-    // Add a new proof request and the corresponding prover's address.
-    // The array proofRequestIDs is updated accordingly.
     // Add a new proof request and the corresponding role ('sender' or 'receiver').
     // The array proofRequestIDs is updated accordingly.
     function addProofRequestAndRole(uint256 tokenID, uint64 requestID, string calldata role) private {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length == 0, "Proof request already exists");
+        require(bytes(tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID]).length == 0, "Proof request already exists");
         require(
             keccak256(bytes(role)) == keccak256(bytes("sender")) ||
             keccak256(bytes(role)) == keccak256(bytes("receiver")),
             "Role must be 'sender' or 'receiver'"
         );
-        tokenID_proofRequest_role[tokenID][requestID] = role;
+        tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID] = role;
         proofRequestIDs.push(requestID);
     }
     
@@ -134,7 +141,7 @@ contract PMNoAdmin is ERC1155, Ownable {
         uint256 tokenID,
         string calldata role,
         SpendingCondition calldata condition
-    ) public {
+    ) external {
         // Only allow if caller owns the tokenID
         require(balanceOf(msg.sender, tokenID) > 0, "Only money owner can add spending condition.");
         // Build the IZKPVerifier.ZKPRequest struct
@@ -156,12 +163,12 @@ contract PMNoAdmin is ERC1155, Ownable {
     
     // Delete a proof request and the address by ID.
     // The array proofRequestIDs is updated accordingly.
-    function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) public {
+    function deleteProofRequestAndRole(uint256 tokenID, uint64 requestID) external {
         require(_allTokenIDs.contains(tokenID), "token id does not exist");
-        require(bytes(tokenID_proofRequest_role[tokenID][requestID]).length != 0, "Proof request does not exist");
+        require(bytes(tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID]).length != 0, "Proof request does not exist");
         // Only delete if the spending condition exists for this user
         require(bytes(spendingConditions[tokenID][msg.sender][requestID].attribute).length != 0, "No spending condition to delete");
-        delete tokenID_proofRequest_role[tokenID][requestID];
+        delete tokenID_requestSetter_proofRequest_role[tokenID][msg.sender][requestID];
         delete spendingConditions[tokenID][msg.sender][requestID];
         // Remove ID from the array (swap-and-pop technique)
         for (uint256 i = 0; i < proofRequestIDs.length; i++) {
@@ -173,11 +180,11 @@ contract PMNoAdmin is ERC1155, Ownable {
         }
     }
 
-    UniversalVerifier public verifier;
+    UniversalVerifier public immutable verifier;
 
     constructor(UniversalVerifier verifier_, address initialOwner, string memory uri_)
-    ERC1155(uri_)
-    Ownable(initialOwner)
+        ERC1155(uri_)
+        Ownable(initialOwner)
     {
         verifier = verifier_;
     }
@@ -216,7 +223,8 @@ contract PMNoAdmin is ERC1155, Ownable {
                 attempts++;
                 require(attempts < 100, "Unable to find unique short token ID");
             } while (_allTokenIDs.contains(newID));
-            require(_allTokenIDs.add(newID), "TokenIDTaken");
+            bool added = _allTokenIDs.add(newID);
+            if (!added) revert TokenIDTaken(newID);
             _mint(to, newID, amount, data);
             tokenName[newID] = name;
         }
@@ -235,7 +243,7 @@ contract PMNoAdmin is ERC1155, Ownable {
     function _checkAllProofsVerified(uint256 tokenID, address sender, address receiver) internal view {
         uint64[] memory tempRequestIDs = proofRequestIDs;
         for (uint256 i = 0; i < tempRequestIDs.length; i++) {
-            string memory role = tokenID_proofRequest_role[tokenID][tempRequestIDs[i]];
+            string memory role = tokenID_requestSetter_proofRequest_role[tokenID][sender][tempRequestIDs[i]];
             if (bytes(role).length == 0) continue;
             if (keccak256(bytes(role)) == keccak256(bytes("sender"))) {
                 if (!verifier.getProofStatus(sender, tempRequestIDs[i]).isVerified) {
@@ -249,7 +257,7 @@ contract PMNoAdmin is ERC1155, Ownable {
         }
     }
 
-    // Override safeTransferFrom and include the onlyValidProofs modifier
+    // Override safeTransferFrom and include the proof checks
     function safeTransferFrom(
         address from,
         address to,
@@ -273,10 +281,13 @@ contract PMNoAdmin is ERC1155, Ownable {
     ) public virtual override {
         require(tokenIDs.length == amounts.length, "ERC1155: Mismatched array lengths");
         require(to != address(0), "ERC1155: transfer to the zero address");
+
+        // Enforce per-token proof checks once per tokenID
         for (uint256 i = 0; i < tokenIDs.length; ++i) {
-            // Enforce per-token proof checks
             _checkAllProofsVerified(tokenIDs[i], from, to);
-            safeTransferFrom(from, to, tokenIDs[i], amounts[i], data);
         }
+
+        // Perform batch transfer once to keep proper batch semantics
+        super.safeBatchTransferFrom(from, to, tokenIDs, amounts, data);
     }
 }
