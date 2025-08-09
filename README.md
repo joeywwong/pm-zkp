@@ -45,22 +45,9 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
 Test it on http://localhost:5010/chart.html
 
 ## TODO
-- [x] Connect with MetaMask
-- [ ] Login with MetaMask (sign a nonce)
-- [x] Show all programmable money owned
-- [x] Mint token
-- [x] Transfer programmable money
-- [x] Display spending conditions before token transfer
-- [x] Generate a link for proof verification if ZKP is not verified
-- [x] Submit proof request to verifier contract
-  - [x] Frontend calls POST (with credentials schema, attribute and value, e.g. birthday > 19900101) to ask backend to compute proof request payload 
-  - [x] Compute proof request payload using the script from iden3’s repository and the Go script inside, and host the service on the backend
-  - [x] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
-- [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
-- [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
-- [x] Remove spending conditions
-- [x] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
-- [x] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
+### Final report
+- [ ] Check if the credentials schemas (or their digests) are stored on blockchain or not
+- [ ] Diagrams, flowcharts (e.g. the UML diagrams in the folder 'docs') for the dApp
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
@@ -92,6 +79,32 @@ Test it on http://localhost:5010/chart.html
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
 - [x] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
 - [x] Put the minting and the addition of spending condition function in other pages, and add buttons navigate to them
+- [ ] Add 2 to 3 more credentials schemas in the dropdown list, with name, semantics, easy for user to understand, not URL.
+- [ ] Add hints on how to enter the value (e.g. for birthday it is entered as yyyymmdd, not the German format dd.mm.yyyy)
+- [ ] Guidance for user to submit proof before transaction, e.g. 'please provide proof by the following link, etc.'. Don't use the error message 'transaction failed.'
+- [ ] Add a hint like 'after submitting proof, click transfer button again'
+- [ ] 'List of programmable tokens', not 'List of programmable money'.
+- [ ] Tx history for each spending condition (can be stored locally as a log file)
+- [ ] Show spending condition status on LHS
+- [ ] Add text 'The following spending conditions apply to this token (name and id)'
+
+### Website functionalities
+- [x] Connect with MetaMask
+- [ ] Login with MetaMask (sign a nonce)
+- [x] Show all programmable money owned
+- [x] Mint token
+- [x] Transfer programmable money
+- [x] Display spending conditions before token transfer
+- [x] Generate a link for proof verification if ZKP is not verified
+- [x] Submit proof request to verifier contract
+  - [x] Frontend calls POST (with credentials schema, attribute and value, e.g. birthday > 19900101) to ask backend to compute proof request payload 
+  - [x] Compute proof request payload using the script from iden3’s repository and the Go script inside, and host the service on the backend
+  - [x] Frontend uses the payload returns from POST to submit a proof request to Privado's verifier contract (via Metamask)
+- [x] Submit a spending condition for a token (the proof request and the prover’s address) to the PM contract
+- [x] One button to Submit proof request to verifier contract and PM contract with one Metamask transaction
+- [x] Remove spending conditions
+- [x] Get the estsimated gas fee from Polygon's gas oracle (https://docs.polygon.technology/tools/gas/polygon-gas-station/)
+- [x] Programmatically set the transaction fee paid by Metamask to the estimated gas fee
 
 ### Database for logging
 - [ ] Save sensitve info (e.g. spending condition 'birthday < 19901231) on DB, instead of smart contract/blockchain, and use request id as the key of the spending conditions
