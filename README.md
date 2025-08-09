@@ -22,12 +22,7 @@ The development build uses Polygon Amoy. When sending transactions, set the prio
    The `docker-compose` command is in the script `run-dev.sh` for convenience. Running this will:
    - Install dependencies for the **frontend**, **backend**, and **iden3_repo**  
    - Compile your Hardhat contracts in **iden3_repo**  
-<<<<<<< HEAD
-   - Launch both client (port 3013) and server (port 5000) 
-
-=======
    - Launch both client (port 3013) and server (port 5000)  
->>>>>>> feature/3-website-multi-pages
 
 ### Tx fee history website
 Test it on http://localhost:5010/chart.html
