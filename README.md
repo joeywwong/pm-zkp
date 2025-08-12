@@ -1,4 +1,7 @@
 # PM-ZKP
+This repository contains my master’s thesis project: a dApp that manage ERC-1155 token transfer, and verifiable credentials (or anonymous credentials) on an EVM chain. Credentials holders prove predicates over their data (e.g., age ≥ 18) using zkSNARKs (Groth16), and a Verifier smart contract verify the proofs on-chain and only then permits ERC-1155 token transfers—i.e., transfers are proof-constrained. Stack: React + MetaMask for frontend, Express.js for backend, SQLite for gas/runtime logging, Solidity for smart contracts.
+
+Crypto building blocks: anonymous credentials, zero-knowledge proofs, zkSNARK, Groth16, Poseidon hash function
 # PM-website
 ## Getting started
 These instructions will get the development environment up and running on your local machine.
