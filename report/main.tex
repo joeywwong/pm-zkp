@@ -78,7 +78,7 @@ sometimes privado not working\\
 \\
 Future work:\\
 -find zkSNARK, anonymous credentials, with faster proof generation time\\
--post-quantum secure implementation with blockchain and benchmarking, e.g. lattice snark with public verifier, lattice snark with designated verifier, lattice-based anonymous credentials\\
+-post-quantum secure implementation with blockchain and benchmarking, e.g. lattice snark with public verifiable, lattice snark with designated verifier, lattice-based anonymous credentials\\
 
 \section{Zero-Knowledge Proofs}\label{sec:zkp}
 A Zero-Knowledge Proof (ZKP) \cite{zkp85} is a protocol that allows one party (the prover $P$) to prove to another party (the verifier $V$) that a statement is true, without revealing any information beyond the fact that the statement is indeed true. In other words, the prover can convince the verifier that they possess certain knowledge or have performed a specific computation correctly, without disclosing the actual details of that knowledge or computation. Schnorr's protocol is one of the examples, and protocols having the structure of Schnorr's protocol (the `3 moves' structure) are called $\Sigma$ protocols. The main properties of ZKP are completeness, soundness, zero-knowledge, and knowledge soundness. In some applications using non-interactive ZKP, a relaxed zero-knowledge (\textit{special honest-verifier zero-knowledge}) suffices, and the non-interactive version of ZKP is achieved by Fiat-Shamir transformation \cite{FS} in random oracle model \cite{RO}.\\

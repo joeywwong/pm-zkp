@@ -2,6 +2,8 @@
 ### Final report
 - [ ] Check if the credentials schemas (or their digests) are stored on blockchain or not
 - [ ] Diagrams, flowcharts (e.g. the UML diagrams in the folder 'docs') for the dApp
+- [ ] Future work: find zkSNARK, anonymous credentials, with faster proof generation time
+- [ ] Future work: post-quantum secure implementation with blockchain and benchmarking, e.g. lattice snark with public verifiable, lattice snark with designated verifier, lattice-based anonymous credentials
 
 ### PM smart contract
 - [x] One function for submitting proof request to both verifier contract and PM contract with one transaction
