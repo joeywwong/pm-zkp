@@ -3,7 +3,7 @@
 \usepackage[english]{babel}
 \usepackage{amsthm}
 \usepackage{amsmath}
-\usepackage{amssymb}
+\usepackage{amssymb} % provides \mathbb and other AMS symbols
 \usepackage{stmaryrd}    % for \llbracket … \rrbracket
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{fancyhdr} % Required for the header
@@ -73,8 +73,12 @@ style=alphabetic,
 sometimes metamask not working\\
 sometimes privado not working\\
 -Using Privado's web wallet to generate proof: no way to log proof generation time, e.g. no api for that, cannot change their code.\\
-possible solution to track proof generation time is to use selenium\\
--using metamask vs transaction done on backend: users trust metamask vs trust our backend
+-proof generation seems slow. To track proof generation time on website, use selenium. May also track proof generation time on JS-SDK.\\
+-using metamask vs transaction done on backend: users trust metamask vs trust our backend\\
+\\
+Future work:\\
+-find zkSNARK, anonymous credentials, with faster proof generation time\\
+-post-quantum secure implementation with blockchain and benchmarking, e.g. lattice snark with public verifier, lattice snark with designated verifier, lattice-based anonymous credentials\\
 
 \section{Zero-Knowledge Proofs}\label{sec:zkp}
 A Zero-Knowledge Proof (ZKP) \cite{zkp85} is a protocol that allows one party (the prover $P$) to prove to another party (the verifier $V$) that a statement is true, without revealing any information beyond the fact that the statement is indeed true. In other words, the prover can convince the verifier that they possess certain knowledge or have performed a specific computation correctly, without disclosing the actual details of that knowledge or computation. Schnorr's protocol is one of the examples, and protocols having the structure of Schnorr's protocol (the `3 moves' structure) are called $\Sigma$ protocols. The main properties of ZKP are completeness, soundness, zero-knowledge, and knowledge soundness. In some applications using non-interactive ZKP, a relaxed zero-knowledge (\textit{special honest-verifier zero-knowledge}) suffices, and the non-interactive version of ZKP is achieved by Fiat-Shamir transformation \cite{FS} in random oracle model \cite{RO}.\\
