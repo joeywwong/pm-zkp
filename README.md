@@ -18,7 +18,8 @@ These instructions will get the development environment up and running on your l
 - **Docker** & **Docker Compose**
 
 ### Important Note for MetaMask transactions on Polygon Amoy and mainnet
-The development build uses Polygon Amoy. When sending transactions, set the priority fee slightly above the 12‑hour low (for example, around 30 gwei). Otherwise, most transactions will fail.
+When sending transactions, set the priority fee slightly above the 12‑hour low (for example, if the recommended fee is 25 gwei, you can pay 30 gwei). Otherwise, most transactions will fail.
+See recommended priority fee here: https://docs.polygon.technology/tools/gas/polygon-gas-station/
 
 ### Setup Steps for PM-website
 1. **Build and start the dev build of PM-website** 
