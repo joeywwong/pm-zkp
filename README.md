@@ -7,6 +7,16 @@ Keywords: verifiable credentials, anonymous credentials, zero-knowledge proofs, 
 This project is under active development.  
 See [TODO.md](./TODO.md) for the current development roadmap and pending tasks.
 
+# PM-contract
+## Getting started
+The PMNoAdmin.sol is the ERC1155 smart contract contains the logics of the programmable money.
+Use the Hardhat 2 project (in folder pm-contract_hardhat2) for contract deployment.
+  ```bash
+  cd PM-contract_hardhat2
+  npx hardhat compile
+  npx hardhat run scripts/deploy.ts --network polygon-amoy 
+  ```
+
 # PM-website
 ## Getting started
 These instructions will get the development environment up and running on your local machine.
