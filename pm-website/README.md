@@ -67,7 +67,7 @@ PM contract
   -[x] if transfer success, show the transfer successful message and make the message box green
   -[x] disable transfer button if the money receiver address and amount are not entered
   -[x] change 'verified' text color to green or red depending on conditions verified or not, to improve user experience
-- [ ] Make the credential schemas box as a 'combo box (also called autocomplete in React)' like the token name box in the minting section, so users can choose from some predefined credential schemas
+- [x] Let users choose from some predefined credential schemas, instead of entering the JSON-LD URL of the credential schemas
 - [ ] Put the mintint and the addition of spending condition function in other pages, and add buttons navigate to them
 
 ### Database for logging
