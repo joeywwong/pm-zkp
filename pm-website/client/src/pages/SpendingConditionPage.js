@@ -292,8 +292,8 @@ export default function SpendingConditionPage({ tokenListRef }) {
         Add Spending Condition
       </Typography>
 
-      {/* JSON-LD Loader */}
-      <Box mb={2}>
+      {/* JSON-LD Loader - COMMENTED OUT */}
+      {/* <Box mb={2}>
         <ReadJsonLD
           url={jsonLdUrl}
           setUrl={setJsonLdUrl}
@@ -313,10 +313,10 @@ export default function SpendingConditionPage({ tokenListRef }) {
             setCredentialNames(names);
           }}
         />
-      </Box>
+      </Box> */}
 
-      {/* Schema Type Dropdown */}
-      <FormControl fullWidth margin="normal" disabled={credentialNames.length === 0}>
+      {/* Schema Type Dropdown - COMMENTED OUT */}
+      {/* <FormControl fullWidth margin="normal" disabled={credentialNames.length === 0}>
         <InputLabel id="schemaType-label">Schema Type</InputLabel>
         <Select
           labelId="schemaType-label"
@@ -332,10 +332,10 @@ export default function SpendingConditionPage({ tokenListRef }) {
             <MenuItem key={schema} value={schema}>{schema}</MenuItem>
           ))}
         </Select>
-      </FormControl>
+      </FormControl> */}
 
-      {/* Attribute Dropdown */}
-      <FormControl fullWidth margin="normal" disabled={!selectedSchema || attributeNames.length === 0}>
+      {/* Attribute Dropdown - COMMENTED OUT */}
+      {/* <FormControl fullWidth margin="normal" disabled={!selectedSchema || attributeNames.length === 0}>
         <InputLabel id="attributeType-label">Attribute</InputLabel>
         <Select
           labelId="attributeType-label"
@@ -351,9 +351,35 @@ export default function SpendingConditionPage({ tokenListRef }) {
             <MenuItem key={attr} value={attr}>{attr}</MenuItem>
           ))}
         </Select>
+      </FormControl> */}
+
+      {/* NEW: Spending Condition Dropdown */}
+      <Typography variant="body1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
+        Please choose one of the spending conditions:
+      </Typography>
+      <FormControl fullWidth margin="normal">
+        <InputLabel id="spending-condition-label">Spending Condition</InputLabel>
+        <Select
+          labelId="spending-condition-label"
+          id="spending-condition"
+          value={selectedAttribute}
+          label="Spending Condition"
+          onChange={e => setSelectedAttribute(e.target.value)}
+        >
+          <MenuItem value="" disabled>
+            Select a spending condition
+          </MenuItem>
+          {/* Predefined options */}
+          <MenuItem value="option1">Age</MenuItem>
+          <MenuItem value="option2">H-Index</MenuItem>
+          <MenuItem value="option3">Annual Income</MenuItem>
+        </Select>
       </FormControl>
 
       {/* Operator Dropdown */}
+      <Typography variant="body1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
+        Please choose one of the operators (e.g., greater than, smaller than, equal to):
+      </Typography>
       <FormControl fullWidth margin="normal" disabled={!selectedAttribute}>
         <InputLabel id="operator-label">Operator</InputLabel>
         <Select
@@ -366,7 +392,16 @@ export default function SpendingConditionPage({ tokenListRef }) {
           <MenuItem value="" disabled>
             Select an operator
           </MenuItem>
-          {(() => {
+          {/* Simplified operator options */}
+          <MenuItem value="$eq">Equal to</MenuItem>
+          <MenuItem value="$ne">Not equal to</MenuItem>
+          <MenuItem value="$gt">Greater than</MenuItem>
+          <MenuItem value="$lt">Less than</MenuItem>
+          <MenuItem value="$gte">Greater than or equal to</MenuItem>
+          <MenuItem value="$lte">Less than or equal to</MenuItem>
+          
+          {/* OLD DYNAMIC OPERATOR LOGIC - COMMENTED OUT */}
+          {/* {(() => {
             let ops = [];
             if (attributeType === 'boolean') {
               ops = [
@@ -393,7 +428,7 @@ export default function SpendingConditionPage({ tokenListRef }) {
             return ops.map(opt => (
               <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
             ));
-          })()}
+          })()} */}
         </Select>
       </FormControl>
 
