@@ -493,7 +493,9 @@ const TokenList = forwardRef((props, ref) => {
                     <Box sx={{ minWidth: 300, display: 'flex', flexDirection: 'column' }}>
                       {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
                         <>
-                          <Typography variant="body2" sx={{ mb: 1 }}>Spending Conditions:</Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            The following spending conditions apply to this token '{tokenNames[selectedTokenId] || 'Unnamed Token'}' ({selectedTokenId})
+                          </Typography>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {spendingConditions[selectedTokenId].map((cond, idx) => {
                               let opLabel = cond.operatorStr;
