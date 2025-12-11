@@ -356,7 +356,7 @@ const TokenList = forwardRef((props, ref) => {
     return (
       <Box sx={{ flexGrow: 1, mt: 2, minHeight: '40vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h5" gutterBottom align="center" sx={{ mt: 0 }}>
-          List of Programmable Money
+          List of Programmable Tokens
         </Typography>
         <Typography variant="body1" align="center" color="text.secondary" sx={{ mt: 2 }}>
           Connect MetaMask to show your programmable money
@@ -368,7 +368,7 @@ const TokenList = forwardRef((props, ref) => {
     return (
       <Box sx={{ flexGrow: 1, mt: 2, minHeight: '40vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h5" gutterBottom align="center" sx={{ mt: 0 }}>
-          List of Programmable Money
+          List of Programmable Tokens
         </Typography>
         <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mt: 6 }}>
           <CircularProgress />
@@ -391,7 +391,7 @@ const TokenList = forwardRef((props, ref) => {
     <>
       <Box sx={{ flexGrow: 1, mt: 2 }}>
         <Typography variant="h5" gutterBottom align="center">
-          List of Programmable Money
+          List of Programmable Tokens
         </Typography>
         <Grid container spacing={3} justifyContent="flex-start">
           {tokenIds.map(id => (
