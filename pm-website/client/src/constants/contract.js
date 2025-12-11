@@ -11,10 +11,10 @@ import verifierContract from './UniversalVerifier_compData';
 
 // This is the deployed PM contract where anyone can add or remove spending conditions on their owned token, 
 // and anyone can mint token,
-//export const CONTRACT_ADDRESS = '0xe09104EAaD696Bf8a4b9534A30C78DF15E42403c';
+export const CONTRACT_ADDRESS = '0xe09104EAaD696Bf8a4b9534A30C78DF15E42403c';
 
 //29th Aug
-export const CONTRACT_ADDRESS = '0x0c0a0fd6000b3e7b437bc59f7843e5a6a9a31230';
+//export const CONTRACT_ADDRESS = '0x0c0a0fd6000b3e7b437bc59f7843e5a6a9a31230';
 
 export const ABI = contractJson.abi;
 export const VERIFIER_CONTRACT_ADDRESS = '0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c';

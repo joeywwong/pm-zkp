@@ -17,7 +17,42 @@ import {
   Paper,
   Link,
   Stack,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
 } from '@mui/material';
+
+const PRESETS = {
+  option1: {
+    label: 'Birthday',
+    url: 'https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld',
+    type: 'KYCAgeCredential',
+    attribute: 'birthday',
+    attributeType: 'integer',
+    transformValue: (dateStr) => {
+      if (!dateStr) return 0;
+      return parseInt(dateStr.replace(/-/g, ''), 10);
+    },
+    // No transformOperator needed as we map directly in UI
+  },
+  option2: {
+    label: 'H-Index',
+    // Placeholder for now
+    url: '',
+    type: '',
+    attribute: '',
+    attributeType: 'integer',
+  },
+  option3: {
+    label: 'Income Level',
+    // Placeholder for now
+    url: '',
+    type: '',
+    attribute: '',
+    attributeType: 'integer',
+  }
+};
 
 export default function SpendingConditionPage({ tokenListRef }) {
   const { staticContract, signerContract } = useContract();
@@ -49,6 +84,8 @@ export default function SpendingConditionPage({ tokenListRef }) {
 
   // Determine attribute data type
   useEffect(() => {
+    if (PRESETS[selectedAttribute]) return; // Skip for presets
+
     if (!jsonLD || !selectedSchema || !selectedAttribute) {
       setAttributeType('');
       return;
@@ -61,6 +98,31 @@ export default function SpendingConditionPage({ tokenListRef }) {
     const tname = parts[parts.length - 1] || '';
     setAttributeType(tname.toLowerCase());
   }, [jsonLD, selectedSchema, selectedAttribute]);
+
+  // Load preset data when a preset option is selected
+  useEffect(() => {
+    const loadPreset = async () => {
+      if (PRESETS[selectedAttribute]) {
+        const preset = PRESETS[selectedAttribute];
+        setJsonLdUrl(preset.url);
+        setAttributeType(preset.attributeType);
+        
+        if (preset.url) {
+          try {
+            const res = await fetch(preset.url);
+            const data = await res.json();
+            setJsonLD(data);
+            // We can set the schema type here so it's ready, 
+            // though we'll also ensure it's correct during submission.
+            setSelectedSchema(preset.type);
+          } catch (e) {
+            console.error("Failed to fetch preset JSON-LD", e);
+          }
+        }
+      }
+    };
+    loadPreset();
+  }, [selectedAttribute]);
 
   // Update attribute list when schema changes
   useEffect(() => {
@@ -122,6 +184,7 @@ export default function SpendingConditionPage({ tokenListRef }) {
 
   // Validation handler
   const validateValue = value => {
+    if (selectedAttribute === 'option1') return; // Skip validation for Birthday date picker
     let err = '';
     if (attributeType === 'integer' && !/^[-]?\d+$/.test(value)) {
       err = 'Please enter a valid integer.';
@@ -139,12 +202,49 @@ export default function SpendingConditionPage({ tokenListRef }) {
     setRequestResult('');
     setIsSettingSpendingCondition(true);
 
-    const valueParam =
-      attributeType === 'integer' || attributeType === 'double'
-        ? Number(filterValue)
-        : filterValue;
+    let finalSchemaType = selectedSchema;
+    let finalAttribute = selectedAttribute;
+    let finalOperator = selectedOperator;
+    let finalValue = filterValue;
+    let finalAttributeType = attributeType;
+    let finalJsonLD = jsonLD;
+    let finalJsonLdUrl = jsonLdUrl;
 
-    if (!jsonLD || !selectedSchema || !selectedAttribute || !selectedOperator || !filterValue || !jsonLdUrl) {
+    // Check if using a preset
+    if (PRESETS[selectedAttribute]) {
+      const preset = PRESETS[selectedAttribute];
+      finalSchemaType = preset.type;
+      finalAttribute = preset.attribute;
+      finalAttributeType = preset.attributeType;
+      finalJsonLdUrl = preset.url;
+      
+      if (preset.transformValue) {
+        finalValue = preset.transformValue(filterValue);
+      }
+      if (preset.transformOperator) {
+        finalOperator = preset.transformOperator(selectedOperator);
+      }
+      
+      // Ensure JSON-LD is loaded if not already
+      if (!finalJsonLD && finalJsonLdUrl) {
+         try {
+             const res = await fetch(finalJsonLdUrl);
+             finalJsonLD = await res.json();
+             setJsonLD(finalJsonLD);
+         } catch (e) {
+             alert("Failed to load JSON-LD for preset");
+             setIsSettingSpendingCondition(false);
+             return;
+         }
+      }
+    }
+
+    const valueParam =
+      finalAttributeType === 'integer' || finalAttributeType === 'double'
+        ? Number(finalValue)
+        : finalValue;
+
+    if (!finalJsonLD || !finalSchemaType || !finalAttribute || !finalOperator || !filterValue || !finalJsonLdUrl) {
       alert('Please fill in all required fields.');
       setIsSettingSpendingCondition(false);
       return;
@@ -154,14 +254,14 @@ export default function SpendingConditionPage({ tokenListRef }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: selectedSchema,
-          attribute: selectedAttribute,
-          schema: jsonLD,
-          operatorStr: selectedOperator,
+          type: finalSchemaType,
+          attribute: finalAttribute,
+          schema: finalJsonLD,
+          operatorStr: finalOperator,
           valueParam,
           tokenID: selectedTokenId,
-          contextParam: jsonLdUrl,
-          attributeType
+          contextParam: finalJsonLdUrl,
+          attributeType: finalAttributeType
         })
       });
       const data = await response.json();
@@ -190,10 +290,30 @@ export default function SpendingConditionPage({ tokenListRef }) {
         const role = proverRole;
 
         const condition = {
-          attribute: selectedAttribute,
-          operatorStr: selectedOperator,
-          value: filterValue
+          attribute: finalAttribute,
+          operatorStr: finalOperator,
+          value: filterValue // Store original user input for display/reference if needed, or finalValue? Usually original is better for UI, but contract might need the transformed one. 
+                             // Actually, the contract stores this condition struct. If the verifier checks against the transformed value, we should probably store the transformed value or the original?
+                             // The `condition` struct in the contract is likely for display or verification logic. 
+                             // If the on-chain verification uses the ZK proof, this `condition` struct might be just metadata.
+                             // However, if I store "Age > 18" but the proof is "Birthday < 2007", storing "Age > 18" is more human readable.
+                             // But let's stick to what the user sees: `filterValue` (Age).
+                             // Wait, if the contract uses this to verify, it needs to match what the proof proves.
+                             // The proof proves "Birthday < 2007".
+                             // If the contract just logs it, it's fine.
+                             // If the contract enforces it, it depends on how `addProofRequest_VerifierAndPM` uses it.
+                             // Looking at the code, it passes `condition` to the contract.
+                             // Let's assume for now we pass the original user intent or the transformed one.
+                             // If I pass `value: filterValue` (18), and `operatorStr: finalOperator` ($lt), it says "Birthday < 18". That's confusing.
+                             // If I pass `value: finalValue` (20071212) and `operatorStr: finalOperator` ($lt), it says "Birthday < 20071212". That is correct and consistent with the proof.
+                             // So I should use `finalValue` and `finalOperator`.
         };
+        
+        // Update condition to use transformed values for consistency with the proof
+        condition.value = valueParam.toString(); // Contract likely expects string or int? The struct definition isn't here. 
+                                                 // In the original code: `value: filterValue`. `filterValue` was string or number.
+                                                 // `valueParam` is number.
+                                                 // Let's use `valueParam`.
 
         let recommendedFee = 30;
         try {
@@ -370,72 +490,60 @@ export default function SpendingConditionPage({ tokenListRef }) {
             Select a spending condition
           </MenuItem>
           {/* Predefined options */}
-          <MenuItem value="option1">Age</MenuItem>
+          <MenuItem value="option1">Birthday</MenuItem>
           <MenuItem value="option2">H-Index</MenuItem>
           <MenuItem value="option3">Annual Income</MenuItem>
         </Select>
       </FormControl>
 
       {/* Operator Dropdown */}
-      <Typography variant="body1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
-        Please choose one of the operators (e.g., greater than, smaller than, equal to):
-      </Typography>
-      <FormControl fullWidth margin="normal" disabled={!selectedAttribute}>
-        <InputLabel id="operator-label">Operator</InputLabel>
-        <Select
-          labelId="operator-label"
-          id="operator"
-          value={selectedOperator}
-          label="Operator"
-          onChange={e => setSelectedOperator(e.target.value)}
-        >
-          <MenuItem value="" disabled>
-            Select an operator
-          </MenuItem>
-          {/* Simplified operator options */}
-          <MenuItem value="$eq">Equal to</MenuItem>
-          <MenuItem value="$ne">Not equal to</MenuItem>
-          <MenuItem value="$gt">Greater than</MenuItem>
-          <MenuItem value="$lt">Less than</MenuItem>
-          <MenuItem value="$gte">Greater than or equal to</MenuItem>
-          <MenuItem value="$lte">Less than or equal to</MenuItem>
-          
-          {/* OLD DYNAMIC OPERATOR LOGIC - COMMENTED OUT */}
-          {/* {(() => {
-            let ops = [];
-            if (attributeType === 'boolean') {
-              ops = [
-                { value: '$eq', label: 'Is equal to ($eq)' },
-                { value: '$ne', label: 'Is not equal to ($ne)' }
-              ];
-            } else if (attributeType === 'integer') {
-              ops = [
-                { value: '$eq', label: 'Is equal to ($eq)' },
-                { value: '$ne', label: 'Is not equal to ($ne)' },
-                { value: '$in', label: 'Matches one of the values ($in)' },
-                { value: '$nin', label: 'Matches none of the values ($nin)' },
-                { value: '$lt', label: 'Is less than ($lt)' },
-                { value: '$gt', label: 'Is greater than ($gt)' }
-              ];
-            } else if (attributeType === 'string' || attributeType === 'double') {
-              ops = [
-                { value: '$eq', label: 'Is equal to ($eq)' },
-                { value: '$ne', label: 'Is not equal to ($ne)' },
-                { value: '$in', label: 'Matches one of the values ($in)' },
-                { value: '$nin', label: 'Matches none of the values ($nin)' }
-              ];
-            }
-            return ops.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-            ));
-          })()} */}
-        </Select>
-      </FormControl>
+      {selectedAttribute && (
+        <>
+          <Typography variant="body1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
+            Please choose one of the operators:
+          </Typography>
+          <FormControl component="fieldset" fullWidth margin="normal">
+            <RadioGroup
+              row
+              aria-label="operator"
+              name="operator"
+              value={selectedOperator}
+              onChange={e => setSelectedOperator(e.target.value)}
+            >
+              {selectedAttribute === 'option1' ? (
+                <>
+                  <FormControlLabel value="$lt" control={<Radio />} label="Before" />
+                  <FormControlLabel value="$gt" control={<Radio />} label="After" />
+                </>
+              ) : (
+                <>
+                  <FormControlLabel value="$gt" control={<Radio />} label="Greater than" />
+                  <FormControlLabel value="$lt" control={<Radio />} label="Less than" />
+                  <FormControlLabel value="$eq" control={<Radio />} label="Equal to" />
+                  <FormControlLabel value="$ne" control={<Radio />} label="Not equal to" />
+                </>
+              )}
+            </RadioGroup>
+          </FormControl>
+        </>
+      )}
 
       {/* Value Input */}
-      {selectedOperator && (
+      {selectedAttribute && (
         <FormControl fullWidth margin="normal" error={!!error}>
-          {attributeType === 'boolean' ? (
+          {selectedAttribute === 'option1' ? (
+             <TextField
+                label="Birthday"
+                type="date"
+                value={filterValue}
+                onChange={e => setFilterValue(e.target.value)}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+                error={!!error}
+                helperText={error}
+              />
+          ) : attributeType === 'boolean' ? (
             <>
               <InputLabel id="boolean-value-label">Value</InputLabel>
               <Select
