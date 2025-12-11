@@ -340,7 +340,7 @@ const TokenList = forwardRef((props, ref) => {
       if (proofNotVerified) {
         setErrors(prev => ({
           ...prev,
-          [id]: "Please submit proof for all spending conditions below before token transfer (see 'Spending condition status' for details/links)."
+          [id]: "Please submit proofs for all spending conditions below before token transfer. \nAfter submitting proofs for all spending conditions, click transfer button again.\n(See Spending Condition Status below for details and URL for proofs submission)."
         }));
       } else {
         // Otherwise, show short error message
@@ -660,7 +660,7 @@ const TokenList = forwardRef((props, ref) => {
                     {errors[selectedTokenId] && (
                       <Alert 
                         severity={errors[selectedTokenId].includes("Please submit proof") ? "warning" : "error"} 
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 2, whiteSpace: 'pre-line' }}
                       >
                         {errors[selectedTokenId]}
                       </Alert>
@@ -673,7 +673,7 @@ const TokenList = forwardRef((props, ref) => {
                     {proofStatuses[selectedTokenId] && (
                       <Accordion defaultExpanded sx={{ mt: 0, mb: 2 }}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography variant="subtitle2">Spending condition status</Typography>
+                          <Typography variant="subtitle2">Spending Condition Status</Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                           <Divider sx={{ mb: 1 }} />
