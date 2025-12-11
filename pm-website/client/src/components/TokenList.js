@@ -722,9 +722,8 @@ const TokenList = forwardRef((props, ref) => {
                                 </Typography>
                                 {!ps.isVerified && ps.url && (
                                   <Typography variant="caption" display="block">
-                                    URL:{' '}
                                     <Link href={ps.url} target="_blank" rel="noopener noreferrer">
-                                      {ps.url}
+                                      Submit Proof Here
                                     </Link>
                                   </Typography>
                                 )}
