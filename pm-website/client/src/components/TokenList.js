@@ -468,195 +468,201 @@ const TokenList = forwardRef((props, ref) => {
                   sx={{
                     flexGrow: 1,
                     display: 'flex',
-                    flexDirection: 'row',
+                    flexDirection: 'column',
                     minHeight: 0,
-                    overflow: 'hidden',
+                    overflowY: 'auto',
                     maxHeight: '100vh',
                     p: 4,
                     gap: 4
                   }}
                 >
-                  {/* Left column: token details and actions */}
-                  <Box sx={{ flex: '0 0 370px', maxWidth: 400, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Token #{selectedTokenId}
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
-                    </Typography>
-                    <Box sx={{ mb: 1, flexGrow: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                  {/* Top Row: Token Info | Spending Conditions | Inputs */}
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    
+                    {/* Col 1: Token Info */}
+                    <Box sx={{ minWidth: 180 }}>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Token #{selectedTokenId}
+                      </Typography>
+                      <Typography variant="body1">
+                        Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
+                      </Typography>
+                    </Box>
+
+                    {/* Col 2: Spending Conditions */}
+                    <Box sx={{ minWidth: 300, display: 'flex', flexDirection: 'column' }}>
                       {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
                         <>
-                          <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                            <Typography variant="body2" sx={{ mr: 2, mt: 0.5 }}>Spending Conditions:</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                              {spendingConditions[selectedTokenId].map((cond, idx) => {
-                                let opLabel = cond.operatorStr;
-                                if (operatorLabelMap[opLabel]) {
-                                  opLabel = operatorLabelMap[opLabel];
-                                } else if ((opLabel || '').startsWith('$')) {
-                                  opLabel = opLabel.substring(1);
-                                } else if (!opLabel) {
-                                  opLabel = '';
-                                }
-                                let proverRole = '';
-                                if (cond.role === 'sender') {
-                                  proverRole = "Sender's";
-                                } else if (cond.role === 'receiver') {
-                                  proverRole = "Receiver's";
-                                } else {
-                                  proverRole = '';
-                                }
-                return (
-                  <Box key={cond.proofRequestId.toString()} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', borderRadius: 2, px: 2, py: 0.5, boxShadow: 1 }}>
-                    <Typography variant="body2" sx={{ mr: 1, fontWeight: 500 }}>
-                      {proverRole} {cond.attribute} {opLabel} {cond.value}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      sx={{
-                        bgcolor: 'error.main',
-                        color: 'white',
-                        '&:hover': { bgcolor: 'error.dark' },
-                        fontWeight: 600,
-                        px: 1.5,
-                        py: 0.2,
-                        borderRadius: 2,
-                        width: 90,
-                        minWidth: 90,
-                        maxWidth: 90,
-                        ml: 1
-                      }}
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (!signerContract || !account) {
-                          alert('Connect wallet and load contract first');
-                          return;
-                        }
-                        setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
-                        let gas_fee = 0;
-                        let startTime;
-                        let txHash;
-                        try {
-                          const provider = signerContract.runner?.provider || signerContract.provider;
-                          // Remove only user's own spending condition
-                          const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
-                          txHash = tx.hash;
-                          const pendingPromise = new Promise(resolve => {
-                            const onPending = hash => {
-                              if (hash === txHash) {
-                                startTime = Date.now();
-                                provider.off('pending', onPending);
-                                resolve();
+                          <Typography variant="body2" sx={{ mb: 1 }}>Spending Conditions:</Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {spendingConditions[selectedTokenId].map((cond, idx) => {
+                              let opLabel = cond.operatorStr;
+                              if (operatorLabelMap[opLabel]) {
+                                opLabel = operatorLabelMap[opLabel];
+                              } else if ((opLabel || '').startsWith('$')) {
+                                opLabel = opLabel.substring(1);
+                              } else if (!opLabel) {
+                                opLabel = '';
                               }
-                            };
-                            provider.on('pending', onPending);
-                            setTimeout(() => {
-                              if (!startTime) {
-                                startTime = Date.now();
-                                provider.off('pending', onPending);
-                                resolve();
+                              let proverRole = '';
+                              if (cond.role === 'sender') {
+                                proverRole = "Sender's";
+                              } else if (cond.role === 'receiver') {
+                                proverRole = "Receiver's";
+                              } else {
+                                proverRole = '';
                               }
-                            }, 2000);
-                          });
-                          await pendingPromise;
-                          const receipt = await tx.wait();
-                          const endTime = Date.now();
-                          const runtime = ((endTime - startTime) / 1000).toFixed(3);
-                          // Calculate gas fee
-                          if (receipt && receipt.gasUsed) {
-                            // Try to use receipt.effectiveGasPrice first.
-                            // If not available, fallback to receipt.gasPrice.
-                            // Testnet may not have effectiveGasPrice.
-                            const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
-                            if (gasPrice) {
-                              gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
-                            }
-                          }
-                          // Logging to backend
-                          try {
-                            await fetch('http://localhost:5010/api/logTx', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                operation_name: 'remove_spending_condition',
-                                tx_hash: txHash,
-                                runtime,
-                                gas_fee
-                              })
-                            });
-                          } catch (e) {
-                            // Ignore logging errors
-                          }
-                          // Refresh spending conditions for this token
-                          try {
-                            const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
-                            const roles = [];
-                            for (let i = 0; i < scIds.length; i++) {
-                              const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
-                              roles.push(role);
-                            }
-                            const updated = scIds.map((scId, idx) => {
-                              const c = scArr[idx];
-                              const attribute = c.attribute || c[0] || '';
-                              const operatorStr = c.operatorStr || c[1] || '';
-                              const value = c.value || c[2] || '';
-                              const role = roles[idx] || '';
-                              return {
-                                proofRequestId: scId,
-                                attribute,
-                                operatorStr,
-                                value,
-                                role
-                              };
-                            });
-                            setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
-                          } catch {}
-                        } catch (err) {
-                          alert('Failed to remove spending condition: ' + (err.reason || err.message));
-                        } finally {
-                          setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
-                        }
-                      }}
-                      startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
-                      disabled={removing[cond.proofRequestId]}
-                    >
-                      {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
-                    </Button>
-                  </Box>
-                                );
-                              })}
-                            </Box>
+                              return (
+                                <Box key={cond.proofRequestId.toString()} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', borderRadius: 2, px: 2, py: 0.5, boxShadow: 1 }}>
+                                  <Typography variant="body2" sx={{ mr: 1, fontWeight: 500 }}>
+                                    {proverRole} {cond.attribute} {opLabel} {cond.value}
+                                  </Typography>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    sx={{
+                                      bgcolor: 'error.main',
+                                      color: 'white',
+                                      '&:hover': { bgcolor: 'error.dark' },
+                                      fontWeight: 600,
+                                      px: 1.5,
+                                      py: 0.2,
+                                      borderRadius: 2,
+                                      width: 90,
+                                      minWidth: 90,
+                                      maxWidth: 90,
+                                      ml: 1
+                                    }}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!signerContract || !account) {
+                                        alert('Connect wallet and load contract first');
+                                        return;
+                                      }
+                                      setRemoving(prev => ({ ...prev, [cond.proofRequestId]: true }));
+                                      let gas_fee = 0;
+                                      let startTime;
+                                      let txHash;
+                                      try {
+                                        const provider = signerContract.runner?.provider || signerContract.provider;
+                                        // Remove only user's own spending condition
+                                        const tx = await signerContract.deleteProofRequestAndRole(selectedTokenId, cond.proofRequestId);
+                                        txHash = tx.hash;
+                                        const pendingPromise = new Promise(resolve => {
+                                          const onPending = hash => {
+                                            if (hash === txHash) {
+                                              startTime = Date.now();
+                                              provider.off('pending', onPending);
+                                              resolve();
+                                            }
+                                          };
+                                          provider.on('pending', onPending);
+                                          setTimeout(() => {
+                                            if (!startTime) {
+                                              startTime = Date.now();
+                                              provider.off('pending', onPending);
+                                              resolve();
+                                            }
+                                          }, 2000);
+                                        });
+                                        await pendingPromise;
+                                        const receipt = await tx.wait();
+                                        const endTime = Date.now();
+                                        const runtime = ((endTime - startTime) / 1000).toFixed(3);
+                                        // Calculate gas fee
+                                        if (receipt && receipt.gasUsed) {
+                                          const gasPrice = receipt.effectiveGasPrice ?? receipt.gasPrice;
+                                          if (gasPrice) {
+                                            gas_fee = ethers.formatEther(BigInt(receipt.gasUsed) * BigInt(gasPrice));
+                                          }
+                                        }
+                                        // Logging to backend
+                                        try {
+                                          await fetch('http://localhost:5010/api/logTx', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              operation_name: 'remove_spending_condition',
+                                              tx_hash: txHash,
+                                              runtime,
+                                              gas_fee
+                                            })
+                                          });
+                                        } catch (e) {
+                                          // Ignore logging errors
+                                        }
+                                        // Refresh spending conditions for this token
+                                        try {
+                                          const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
+                                          const roles = [];
+                                          for (let i = 0; i < scIds.length; i++) {
+                                            const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
+                                            roles.push(role);
+                                          }
+                                          const updated = scIds.map((scId, idx) => {
+                                            const c = scArr[idx];
+                                            const attribute = c.attribute || c[0] || '';
+                                            const operatorStr = c.operatorStr || c[1] || '';
+                                            const value = c.value || c[2] || '';
+                                            const role = roles[idx] || '';
+                                            return {
+                                              proofRequestId: scId,
+                                              attribute,
+                                              operatorStr,
+                                              value,
+                                              role
+                                            };
+                                          });
+                                          setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
+                                        } catch {}
+                                      } catch (err) {
+                                        alert('Failed to remove spending condition: ' + (err.reason || err.message));
+                                      } finally {
+                                        setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
+                                      }
+                                    }}
+                                    startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
+                                    disabled={removing[cond.proofRequestId]}
+                                  >
+                                    {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
+                                  </Button>
+                                </Box>
+                              );
+                            })}
                           </Box>
                         </>
                       ) : (
-                        <Typography variant="body2" sx={{ mb: 1 }} color="text.secondary">
+                        <Typography variant="body2" color="text.secondary">
                           No spending conditions set for this token.
                         </Typography>
                       )}
                     </Box>
-                    <Stack spacing={1.5} sx={{ mb: 1 }}>
-                      <TextField
-                        label="Recipient Address"
-                        value={recipients[selectedTokenId] || ''}
-                        onChange={e => handleRecipientChange(selectedTokenId, e.target.value)}
-                        size="small"
-                        fullWidth
-                      />
-                      <TextField
-                        label="Amount"
-                        type="number"
-                        inputProps={{ min: 0 }}
-                        value={amounts[selectedTokenId] || ''}
-                        onChange={e => handleAmountChange(selectedTokenId, e.target.value)}
-                        size="small"
-                        fullWidth
-                      />
-                    </Stack>
+
+                    {/* Col 3: Inputs */}
+                    <Box sx={{ minWidth:500 }}>
+                      <Stack spacing={2}>
+                        <TextField
+                          label="Recipient Address"
+                          value={recipients[selectedTokenId] || ''}
+                          onChange={e => handleRecipientChange(selectedTokenId, e.target.value)}
+                          size="small"
+                          fullWidth
+                        />
+                        <TextField
+                          label="Amount"
+                          type="number"
+                          inputProps={{ min: 0 }}
+                          value={amounts[selectedTokenId] || ''}
+                          onChange={e => handleAmountChange(selectedTokenId, e.target.value)}
+                          size="small"
+                          fullWidth
+                        />
+                      </Stack>
+                    </Box>
                   </Box>
-                  {/* Right column: proof statuses */}
-                  <Box sx={{ flex: 1, minWidth: 0, maxWidth: '100%', overflowY: 'auto', pl: 4, display: 'flex', flexDirection: 'column' }}>
+
+                  {/* Bottom Row: Alerts & Status */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
                     {errors[selectedTokenId] && (
                       <Alert 
                         severity={errors[selectedTokenId].includes("Please submit proof") ? "warning" : "error"} 
