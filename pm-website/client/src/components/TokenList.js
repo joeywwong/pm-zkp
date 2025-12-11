@@ -340,7 +340,7 @@ const TokenList = forwardRef((props, ref) => {
       if (proofNotVerified) {
         setErrors(prev => ({
           ...prev,
-          [id]: "Transfer failed: Submit proof for all spending conditions below (see 'Spending condition status' for details/links). After submitting, try transferring again."
+          [id]: "Please submit proof for all spending conditions below before token transfer (see 'Spending condition status' for details/links)."
         }));
       } else {
         // Otherwise, show short error message
@@ -658,7 +658,10 @@ const TokenList = forwardRef((props, ref) => {
                   {/* Right column: proof statuses */}
                   <Box sx={{ flex: 1, minWidth: 0, maxWidth: '100%', overflowY: 'auto', pl: 4, display: 'flex', flexDirection: 'column' }}>
                     {errors[selectedTokenId] && (
-                      <Alert severity="error" sx={{ mb: 2 }}>
+                      <Alert 
+                        severity={errors[selectedTokenId].includes("Please submit proof") ? "warning" : "error"} 
+                        sx={{ mb: 2 }}
+                      >
                         {errors[selectedTokenId]}
                       </Alert>
                     )}
