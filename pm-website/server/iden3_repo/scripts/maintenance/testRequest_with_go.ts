@@ -67,7 +67,7 @@ export async function main(
       });
       //console.log('✅ schema-tool stdout:\n', goOut);
     } catch (err: any) {
-      //console.log('❌ schema-tool failed:', err.stderr ?? err.message);
+      console.log('❌ schema-tool failed:', err.stderr ?? err.message);
       throw err;
     }
 
@@ -283,7 +283,7 @@ export async function main(
                   [operatorStr]: coercedValue,
                 },
               },
-              type: "KYCAgeCredential",
+              type: type,
             },
           },
         ],
@@ -325,6 +325,7 @@ export async function main(
       else {
         //console.log("This is NOT the correct schemaClaimPathKey");
       }
+    }
     //console.log("requestId: ", requestId);
     //console.log("metadata: "JSON.stringify(invokeRequestMetadataKYCAgeCredential, null, "\t"));
     //console.log("validator: ", validatorAddress);
@@ -345,13 +346,13 @@ export async function main(
     }));
     //console.log(JSON.stringify(payload));
     //console.log(`Request ID: ${requestId} is set in tx: ${tx.hash}`);
-  }
+  
   } catch (err) {
     // Print error as JSON to stdout for backend to capture
     console.error("❌ [MAIN] Error:", err);
     // Optionally, print as JSON for easier parsing:
     console.log(JSON.stringify({ error: err instanceof Error ? err.stack : String(err) }));
-    process.exit(1);
+    //process.exit(1);
   }
 }
 

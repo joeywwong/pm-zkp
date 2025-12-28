@@ -37,11 +37,13 @@ const PRESETS = {
     // No transformOperator needed as we map directly in UI
   },
   option2: {
-    label: 'H-Index',
-    // Placeholder for now
-    url: '',
-    type: '',
-    attribute: '',
+    label: 'H-index',
+    // The URL sent to the wallet must match the credential exactly (often ipfs://)
+    url: 'ipfs://QmdeXdYYFMjK2wfnyXc1vWKinmdiw1UGTZfyqe3xjxtq7s',
+    // The fetchUrl is used by the app to download the JSON content
+    fetchUrl: 'https://ipfs.io/ipfs/QmdeXdYYFMjK2wfnyXc1vWKinmdiw1UGTZfyqe3xjxtq7s',
+    type: 'Academia',
+    attribute: 'H-index',
     attributeType: 'integer',
   },
   option3: {
@@ -107,14 +109,17 @@ export default function SpendingConditionPage({ tokenListRef }) {
         setJsonLdUrl(preset.url);
         setAttributeType(preset.attributeType);
         
-        if (preset.url) {
+        // Use fetchUrl if available, otherwise fallback to url
+        const urlToFetch = preset.fetchUrl || preset.url;
+        if (urlToFetch) {
           try {
-            const res = await fetch(preset.url);
+            const res = await fetch(urlToFetch);
             const data = await res.json();
             setJsonLD(data);
             // We can set the schema type here so it's ready, 
             // though we'll also ensure it's correct during submission.
             setSelectedSchema(preset.type);
+            console.log(data);
           } catch (e) {
             console.error("Failed to fetch preset JSON-LD", e);
           }
@@ -226,15 +231,19 @@ export default function SpendingConditionPage({ tokenListRef }) {
       }
       
       // Ensure JSON-LD is loaded if not already
-      if (!finalJsonLD && finalJsonLdUrl) {
-         try {
-             const res = await fetch(finalJsonLdUrl);
-             finalJsonLD = await res.json();
-             setJsonLD(finalJsonLD);
-         } catch (e) {
-             alert("Failed to load JSON-LD for preset");
-             setIsSettingSpendingCondition(false);
-             return;
+      if (!finalJsonLD) {
+         // Use fetchUrl if available
+         const urlToFetch = preset.fetchUrl || preset.url;
+         if (urlToFetch) {
+             try {
+                 const res = await fetch(urlToFetch);
+                 finalJsonLD = await res.json();
+                 setJsonLD(finalJsonLD);
+             } catch (e) {
+                 alert("Failed to load JSON-LD for preset");
+                 setIsSettingSpendingCondition(false);
+                 return;
+             }
          }
       }
     }
@@ -250,25 +259,30 @@ export default function SpendingConditionPage({ tokenListRef }) {
       return;
     }
     try {
+      const payload = {
+        type: finalSchemaType,
+        attribute: finalAttribute,
+        schema: finalJsonLD,
+        operatorStr: finalOperator,
+        valueParam,
+        tokenID: selectedTokenId,
+        contextParam: finalJsonLdUrl,
+        attributeType: finalAttributeType
+      };
+
+      console.log("Request Payload:", payload);
+
       const response = await fetch('http://localhost:5010/api/requestPayload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: finalSchemaType,
-          attribute: finalAttribute,
-          schema: finalJsonLD,
-          operatorStr: finalOperator,
-          valueParam,
-          tokenID: selectedTokenId,
-          contextParam: finalJsonLdUrl,
-          attributeType: finalAttributeType
-        })
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
 
       if (data.requestId) {
         setRequestResult(`Request ID: ${data.requestId}`);
       } else {
+        // setRequestResult(`Response: ${JSON.stringify(data)}`);
         setRequestResult(`Response: ${JSON.stringify(data)}`);
       }
 
@@ -299,14 +313,6 @@ export default function SpendingConditionPage({ tokenListRef }) {
                              // However, if I store "Age > 18" but the proof is "Birthday < 2007", storing "Age > 18" is more human readable.
                              // But let's stick to what the user sees: `filterValue` (Age).
                              // Wait, if the contract uses this to verify, it needs to match what the proof proves.
-                             // The proof proves "Birthday < 2007".
-                             // If the contract just logs it, it's fine.
-                             // If the contract enforces it, it depends on how `addProofRequest_VerifierAndPM` uses it.
-                             // Looking at the code, it passes `condition` to the contract.
-                             // Let's assume for now we pass the original user intent or the transformed one.
-                             // If I pass `value: filterValue` (18), and `operatorStr: finalOperator` ($lt), it says "Birthday < 18". That's confusing.
-                             // If I pass `value: finalValue` (20071212) and `operatorStr: finalOperator` ($lt), it says "Birthday < 20071212". That is correct and consistent with the proof.
-                             // So I should use `finalValue` and `finalOperator`.
         };
         
         // Update condition to use transformed values for consistency with the proof
@@ -491,7 +497,7 @@ export default function SpendingConditionPage({ tokenListRef }) {
           </MenuItem>
           {/* Predefined options */}
           <MenuItem value="option1">Birthday</MenuItem>
-          <MenuItem value="option2">H-Index</MenuItem>
+          <MenuItem value="option2">H-index</MenuItem>
           <MenuItem value="option3">Annual Income</MenuItem>
         </Select>
       </FormControl>
@@ -649,7 +655,7 @@ export default function SpendingConditionPage({ tokenListRef }) {
       </Stack>
 
       {/* Transaction Status */}
-      {(verifierTxHash || verifierTxStatus || verifierTxError) && (
+      {(verifierTxHash || verifierTxStatus || verifierTxError || requestResult) && (
         <Paper
           elevation={1}
           sx={{
