@@ -1,11 +1,16 @@
 # PM-ZKP
-This repository contains my master’s thesis project: a dApp that manage ERC-1155 token transfer, and verifiable credentials on an EVM chain. Credentials holders prove predicates over their data (e.g., age ≥ 18) using zkSNARKs (Groth16), and a Verifier smart contract verify the proofs on-chain and only then permits ERC-1155 token transfers—i.e., transfers are proof-constrained. Tech stack: React.js + MetaMask for frontend, Express.js for backend, SQLite for database of gas/runtime logging, Solidity for smart contracts, Privado ID for verifiable credentials, decentralized identity (DID), self-sovereign identity (SSI), Docker for containerization.
+This repository contains the prototype developed for my master’s thesis: a dApp for managing ERC-1155 token transfers using verifiable credentials on an EVM-compatible blockchain. Credential holders prove predicates over their data, such as age ≥ 18, using Groth16 zkSNARKs. A verifier smart contract verifies the proofs on-chain and permits ERC-1155 token transfers only after the required proofs have been successfully verified; in other words, transfers are proof-constrained. 
+
+## Tech Stack
+### Frontend: React.js + MetaMask 
+### Backend: Express.js
+### Smart contract: Solidity, OpenZeppelin
+### Blockchain: MetaMask, Hardhat, Polygon network
+### Ditital identity: Privado ID (verifiable credentials, decentralized identity (DID), self-sovereign identity (SSI))
+### Database: SQLite for gas fee and runtime logging
+### Infrastructure: Docker
 
 Keywords: verifiable credentials, anonymous credentials, zero-knowledge proofs, zkSNARK, Groth16
-
-## Project Status
-This project is under active development.  
-See [TODO.md](./TODO.md) for the current development roadmap and pending tasks.
 
 # PM-contract
 ## Getting started
