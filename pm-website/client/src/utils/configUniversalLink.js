@@ -35,8 +35,6 @@ export default function getUrlFromZkpRequest(
 
   // Base64 encode the JSON representation of the object
   const encodedRequest = btoa(JSON.stringify(req));
-  const encodedBack = encodeURIComponent(backUrl);
-  const encodedFinish = encodeURIComponent(finishUrl);
 
   // Construct and return the universal wallet link
   return `https://wallet.privado.id/#i_m=${encodedRequest}`;

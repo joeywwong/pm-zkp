@@ -1,74 +1,46 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
-import TokenIcon from '@mui/icons-material/Token';
-import SettingsIcon from '@mui/icons-material/Settings';
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
+import AddCircleRoundedIcon from '@mui/icons-material/AddCircleRounded';
+import RuleRoundedIcon from '@mui/icons-material/RuleRounded';
 
-export default function Navigation() {
+const navItems = [
+  { path: '/', label: 'Token dashboard', description: 'Balances & transfers', icon: DashboardRoundedIcon },
+  { path: '/mint', label: 'Mint token', description: 'Issue programmable money', icon: AddCircleRoundedIcon },
+  { path: '/spending-conditions', label: 'Spending conditions', description: 'Configure proof rules', icon: RuleRoundedIcon },
+];
+
+export default function Navigation({ onNavigate }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
-    {
-      path: '/',
-      label: 'Token List',
-      icon: <TokenIcon />,
-      description: 'View and manage your tokens'
-    },
-    {
-      path: '/mint',
-      label: 'Mint Token',
-      icon: <TokenIcon />,
-      description: 'Create new tokens'
-    },
-    {
-      path: '/spending-conditions',
-      label: 'Spending Conditions',
-      icon: <SettingsIcon />,
-      description: 'Add spending conditions to tokens'
-    }
-  ];
-
   return (
-    <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-      <Typography variant="h4" gutterBottom align="center" sx={{ mb: 3 }}>
-        Programmable Money Dashboard
-      </Typography>
-      <Stack 
-        direction="row" 
-        spacing={2} 
-        justifyContent="center"
-        sx={{ flexWrap: 'wrap', gap: 2 }}
-      >
-        {navItems.map((item) => (
+    <Stack spacing={0.8} sx={{ mt: 1 }}>
+      {navItems.map(({ path, label, description, icon: Icon }) => {
+        const active = location.pathname === path;
+        return (
           <Button
-            key={item.path}
-            variant={location.pathname === item.path ? 'contained' : 'outlined'}
-            color="primary"
-            startIcon={item.icon}
-            onClick={() => navigate(item.path)}
+            key={path}
+            onClick={() => { navigate(path); onNavigate?.(); }}
+            aria-current={active ? 'page' : undefined}
+            startIcon={<Icon />}
             sx={{
-              minWidth: 200,
-              height: 56,
-              flexDirection: 'column',
-              alignItems: 'center',
-              '& .MuiButton-startIcon': {
-                margin: 0,
-                marginBottom: 0.5
-              }
+              justifyContent: 'flex-start', alignItems: 'center', textAlign: 'left', px: 1.5, py: 1.15,
+              minHeight: 58, color: active ? 'primary.main' : 'text.primary',
+              bgcolor: active ? 'rgba(91,79,233,.09)' : 'transparent', border: '1px solid',
+              borderColor: active ? 'rgba(91,79,233,.13)' : 'transparent',
+              '&:hover': { bgcolor: active ? 'rgba(91,79,233,.13)' : 'rgba(24,33,53,.04)' },
+              '& .MuiButton-startIcon': { mr: 1.4 },
             }}
           >
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="button" display="block">
-                {item.label}
-              </Typography>
-              <Typography variant="caption" display="block" sx={{ opacity: 0.7, fontSize: '0.65rem' }}>
-                {item.description}
-              </Typography>
+            <Box>
+              <Typography variant="body2" fontWeight={750} lineHeight={1.25}>{label}</Typography>
+              <Typography variant="caption" color="text.secondary" lineHeight={1.2}>{description}</Typography>
             </Box>
           </Button>
-        ))}
-      </Stack>
-    </Box>
+        );
+      })}
+    </Stack>
   );
 }

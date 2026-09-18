@@ -9,25 +9,34 @@ import {
   Box,
   Card,
   CardContent,
-  CardActions,
   Typography,
   TextField,
   Button,
-  Grid,
   Alert,
   CircularProgress,
   Link,
   Stack,
   Divider,
-  Modal,
-  Grow,
+  Drawer,
+  Chip,
+  LinearProgress,
+  Paper,
+  Tooltip,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
+import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
+import TokenRoundedIcon from '@mui/icons-material/TokenRounded';
+import SendRoundedIcon from '@mui/icons-material/SendRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
 
 const TokenList = forwardRef((props, ref) => {
   const [selectedTokenId, setSelectedTokenId] = useState(null);
@@ -208,6 +217,8 @@ const TokenList = forwardRef((props, ref) => {
 
   useEffect(() => {
     loadTokens();
+    // Contract/account changes are the refresh boundary for the dashboard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staticContract, account]);
 
   const handleRecipientChange = (id, value) => {
@@ -228,13 +239,9 @@ const TokenList = forwardRef((props, ref) => {
     }
     setTransferring(prev => ({ ...prev, [id]: true }));
     let proofNotVerified = false;
-    let txStartTime = null;
-    let txHash = null;
-    let minedTime = null;
-    let gasFee = null;
     try {
       // --- Fetch only current user's spending conditions ---
-      const [scIds, scArr] = await staticContract.getSpendingConditions(id, account);
+      const [scIds] = await staticContract.getSpendingConditions(id, account);
       const proofPairs = [];
       for (let i = 0; i < scIds.length; i++) {
         const role = await staticContract.tokenID_requestSetter_proofRequest_role(id, account, scIds[i]);
@@ -354,26 +361,32 @@ const TokenList = forwardRef((props, ref) => {
 
   if (!account) {
     return (
-      <Box sx={{ flexGrow: 1, mt: 2, minHeight: '40vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography variant="h5" gutterBottom align="center" sx={{ mt: 0 }}>
-          List of Programmable Money
-        </Typography>
-        <Typography variant="body1" align="center" color="text.secondary" sx={{ mt: 2 }}>
-          Connect MetaMask to show your programmable money
-        </Typography>
-      </Box>
+      <Paper sx={{ minHeight: 420, display: 'grid', placeItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 4, px: 3 }}>
+        <Stack alignItems="center" spacing={2} sx={{ maxWidth: 440, textAlign: 'center' }}>
+          <Box sx={{ width: 64, height: 64, borderRadius: 3, display: 'grid', placeItems: 'center', bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main' }}>
+            <AccountBalanceWalletRoundedIcon sx={{ fontSize: 32 }} />
+          </Box>
+          <Box>
+            <Typography variant="h3">Connect your wallet</Typography>
+            <Typography color="text.secondary" mt={1} lineHeight={1.65}>
+              Use the wallet control above to view balances, manage spending conditions, and transfer programmable tokens.
+            </Typography>
+          </Box>
+          <Chip label="MetaMask required" variant="outlined" size="small" />
+        </Stack>
+      </Paper>
     );
   }
   if (loading) {
     return (
-      <Box sx={{ flexGrow: 1, mt: 2, minHeight: '40vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography variant="h5" gutterBottom align="center" sx={{ mt: 0 }}>
-          List of Programmable Money
-        </Typography>
-        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mt: 6 }}>
-          <CircularProgress />
-        </Box>
-      </Box>
+      <Paper sx={{ overflow: 'hidden', border: '1px solid', borderColor: 'divider', borderRadius: 4 }}>
+        <LinearProgress />
+        <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ minHeight: 360, p: 3 }}>
+          <CircularProgress size={34} thickness={4} />
+          <Typography variant="h4">Loading programmable assets</Typography>
+          <Typography color="text.secondary">Reading token balances and proof policies from the network…</Typography>
+        </Stack>
+      </Paper>
     );
   }
 
@@ -385,110 +398,181 @@ const TokenList = forwardRef((props, ref) => {
     '$nin': 'matches none of the values',
     '$lt': 'is less than',
     '$gt': 'is greater than',
+    '$gte': 'is greater than or equal to',
+    '$lte': 'is less than or equal to',
   };
+
+  const totalBalance = balances.reduce((sum, balance) => {
+    try { return sum + BigInt(balance || 0); } catch { return sum; }
+  }, 0n).toString();
+  const conditionCount = Object.values(spendingConditions).reduce((sum, conditions) => sum + conditions.length, 0);
 
   return (
     <>
-      <Box sx={{ flexGrow: 1, mt: 2 }}>
-        <Typography variant="h5" gutterBottom align="center">
-          List of Programmable Money
-        </Typography>
-        <Grid container spacing={3} justifyContent="flex-start">
+      <Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.5fr) repeat(2, minmax(190px, .55fr))' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Paper sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 4, color: 'white', background: 'linear-gradient(125deg, #282268 0%, #5B4FE9 62%, #7770F4 100%)', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', bgcolor: 'rgba(255,255,255,.07)', right: -45, top: -70 }} />
+            <Typography variant="overline" sx={{ opacity: .78, letterSpacing: '.12em', fontWeight: 800 }}>Portfolio balance</Typography>
+            <Stack direction="row" alignItems="baseline" spacing={1} mt={0.5}>
+              <Typography variant="h1" sx={{ color: 'inherit' }}>{totalBalance}</Typography>
+              <Typography sx={{ opacity: .78, fontWeight: 700 }}>units</Typography>
+            </Stack>
+            <Typography variant="body2" sx={{ opacity: .74, mt: 1 }}>Across every programmable token held by this wallet</Typography>
+          </Paper>
+          <Paper sx={{ p: 2.5, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: 'rgba(24,169,153,.1)', color: 'secondary.main', display: 'grid', placeItems: 'center', mb: 2 }}><TokenRoundedIcon /></Box>
+            <Typography variant="h2">{tokenIds.length}</Typography>
+            <Typography color="text.secondary" variant="body2">Token types</Typography>
+          </Paper>
+          <Paper sx={{ p: 2.5, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main', display: 'grid', placeItems: 'center', mb: 2 }}><VerifiedUserRoundedIcon /></Box>
+            <Typography variant="h2">{conditionCount}</Typography>
+            <Typography color="text.secondary" variant="body2">Active conditions</Typography>
+          </Paper>
+        </Box>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1} mb={2}>
+          <Box>
+            <Typography variant="h3">Your tokens</Typography>
+            <Typography variant="body2" color="text.secondary" mt={0.4}>Select an asset to inspect its policy or start a transfer.</Typography>
+          </Box>
+          <Chip label={`${tokenIds.length} ${tokenIds.length === 1 ? 'asset' : 'assets'}`} size="small" variant="outlined" />
+        </Stack>
+
+        {tokenIds.length === 0 ? (
+          <Paper sx={{ py: 7, px: 3, textAlign: 'center', border: '1px dashed', borderColor: 'divider', borderRadius: 4 }}>
+            <TokenRoundedIcon sx={{ fontSize: 38, color: 'text.secondary', mb: 1 }} />
+            <Typography variant="h4">No tokens found</Typography>
+            <Typography color="text.secondary" mt={0.7}>Mint a token to begin building a programmable asset policy.</Typography>
+          </Paper>
+        ) : (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 2 }}>
           {tokenIds.map(id => (
-            <Grid item key={id}>
-              <Card elevation={3} sx={{ width: 320, height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.2s' }}
-                onClick={() => setSelectedTokenId(id)}>
-                <CardContent sx={{ flexGrow: 1, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                  <Typography variant="h6" gutterBottom>
-                    {tokenNames[id] || 'Unnamed Token'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2 }}>
-                    Balance: <b>{balances[tokenIds.indexOf(id)] || '0'}</b>
-                  </Typography>
+            <Card
+              key={id}
+              component="button"
+              onClick={() => setSelectedTokenId(id)}
+              sx={{
+                width: '100%', minHeight: 190, p: 0, textAlign: 'left', cursor: 'pointer', bgcolor: 'background.paper',
+                transition: 'transform .2s ease, box-shadow .2s ease, border-color .2s ease',
+                '&:hover': { transform: 'translateY(-3px)', borderColor: 'rgba(91,79,233,.32)', boxShadow: '0 18px 44px rgba(30,39,65,.11)' },
+                '&:focus-visible': { outline: '3px solid rgba(91,79,233,.28)', outlineOffset: 2 },
+              }}
+            >
+                <CardContent sx={{ width: '100%', p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Box sx={{ width: 46, height: 46, borderRadius: 2.5, display: 'grid', placeItems: 'center', color: 'primary.main', bgcolor: 'rgba(91,79,233,.09)' }}>
+                      <TokenRoundedIcon />
+                    </Box>
+                    <Chip size="small" label={`#${id}`} sx={{ fontFamily: 'monospace' }} />
+                  </Stack>
+                  <Typography variant="h4" mt={2.5} noWrap>{tokenNames[id] || 'Unnamed Token'}</Typography>
+                  <Stack direction="row" alignItems="flex-end" justifyContent="space-between" mt={1.4}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Available balance</Typography>
+                      <Typography variant="h3">{balances[tokenIds.indexOf(id)] || '0'}</Typography>
+                    </Box>
+                    <Tooltip title="Open token details"><ArrowForwardRoundedIcon color="primary" /></Tooltip>
+                  </Stack>
+                  <Divider sx={{ my: 1.8 }} />
+                  <Stack direction="row" spacing={0.8} alignItems="center">
+                    <LockRoundedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="caption" color="text.secondary">
+                      {(spendingConditions[id] || []).length === 0 ? 'No spending conditions' : `${spendingConditions[id].length} spending ${(spendingConditions[id] || []).length === 1 ? 'condition' : 'conditions'}`}
+                    </Typography>
+                  </Stack>
                 </CardContent>
               </Card>
-            </Grid>
           ))}
-        </Grid>
+          </Box>
+        )}
       </Box>
 
-      {/* Modal for enlarged card */}
-      <Modal
+      <Drawer
+        anchor="right"
         open={!!selectedTokenId}
         onClose={() => setSelectedTokenId(null)}
-        closeAfterTransition
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 'min(760px, 92vw)' }, bgcolor: 'background.default' } }}
       >
-        <Grow in={!!selectedTokenId} timeout={300}>
-          <Box sx={{ outline: 'none', width: '100vw', height: '100vh', p: 0, m: 0 }}>
+          <Box sx={{ outline: 'none', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
             {selectedTokenId && (
-              <Card
-                elevation={6}
+              <Box
                 sx={{
-                  width: '100vw',
-                  height: '100vh',
-                  borderRadius: 0,
-                  p: 0,
+                  minHeight: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                 }}
               >
-                {/* Header row: close button and token name, blue background */}
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     width: '100%',
-                    bgcolor: 'primary.main', // Use theme's primary blue
-                    color: 'primary.contrastText',
-                    minHeight: 64,
-                    px: 2,
-                    py: 1,
-                    borderTopLeftRadius: 0,
-                    borderTopRightRadius: 0,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    minHeight: 76,
+                    px: { xs: 2, sm: 3 },
+                    py: 1.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 3,
                   }}
                 >
                   <IconButton
                     aria-label="close"
                     onClick={() => setSelectedTokenId(null)}
                     sx={{
-                      color: 'primary.contrastText',
-                      mr: 2,
-                      background: 'transparent',
-                      '&:hover': { background: 'rgba(255,255,255,0.1)' }
+                      color: 'text.primary',
+                      mr: 1.5,
+                      bgcolor: 'background.default',
+                      '&:hover': { bgcolor: 'action.hover' }
                     }}
                   >
                     <CloseIcon />
                   </IconButton>
-                  <Typography variant="h5" component="div" sx={{ fontWeight: 600, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {tokenNames[selectedTokenId] || 'Unnamed Token'}
-                  </Typography>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography variant="h4" noWrap>{tokenNames[selectedTokenId] || 'Unnamed Token'}</Typography>
+                    <Typography variant="caption" color="text.secondary">Token #{selectedTokenId}</Typography>
+                  </Box>
+                  <Chip size="small" color="success" variant="outlined" label="On-chain" />
                 </Box>
                 <CardContent
                   sx={{
                     flexGrow: 1,
-                    display: 'flex',
-                    flexDirection: 'row',
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(280px, .9fr)' },
                     minHeight: 0,
-                    overflow: 'hidden',
-                    maxHeight: '100vh',
-                    p: 4,
-                    gap: 4
+                    p: { xs: 2, sm: 3 },
+                    gap: 2.5,
+                    alignItems: 'start',
                   }}
                 >
                   {/* Left column: token details and actions */}
-                  <Box sx={{ flex: '0 0 370px', maxWidth: 400, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Token #{selectedTokenId}
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Balance: <b>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</b>
-                    </Typography>
+                  <Stack spacing={2.5} sx={{ minWidth: 0 }}>
+                    <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                      <Typography variant="caption" color="text.secondary">Available balance</Typography>
+                      <Typography variant="h1" mt={0.5}>{balances[tokenIds.indexOf(selectedTokenId)] || '0'}</Typography>
+                      <Typography variant="body2" color="text.secondary">units ready to transfer</Typography>
+                    </Paper>
+                    <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                        <LockRoundedIcon color="primary" fontSize="small" />
+                        <Typography variant="h4">Spending conditions</Typography>
+                      </Stack>
                     <Box sx={{ mb: 1, flexGrow: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
                       {spendingConditions[selectedTokenId] && spendingConditions[selectedTokenId].length > 0 ? (
                         <>
                           <Box sx={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                            <Typography variant="body2" sx={{ mr: 2, mt: 0.5 }}>Spending Conditions:</Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                               {spendingConditions[selectedTokenId].map((cond, idx) => {
                                 let opLabel = cond.operatorStr;
@@ -508,25 +592,19 @@ const TokenList = forwardRef((props, ref) => {
                                   proverRole = '';
                                 }
                 return (
-                  <Box key={cond.proofRequestId.toString()} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'grey.100', borderRadius: 2, px: 2, py: 0.5, boxShadow: 1 }}>
-                    <Typography variant="body2" sx={{ mr: 1, fontWeight: 500 }}>
+                  <Box key={cond.proofRequestId.toString()} sx={{ display: 'flex', alignItems: 'center', width: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 2.5, px: 1.5, py: 1.2, bgcolor: 'background.default' }}>
+                    <Typography variant="body2" sx={{ mr: 1, fontWeight: 650, flex: 1 }}>
                       {proverRole} {cond.attribute} {opLabel} {cond.value}
                     </Typography>
                     <Button
-                      variant="contained"
+                      variant="text"
+                      color="error"
                       size="small"
                       sx={{
-                        bgcolor: 'error.main',
-                        color: 'white',
-                        '&:hover': { bgcolor: 'error.dark' },
                         fontWeight: 600,
-                        px: 1.5,
-                        py: 0.2,
-                        borderRadius: 2,
-                        width: 90,
-                        minWidth: 90,
-                        maxWidth: 90,
-                        ml: 1
+                        px: 1,
+                        minWidth: 'auto',
+                        ml: 1,
                       }}
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -619,7 +697,7 @@ const TokenList = forwardRef((props, ref) => {
                           setRemoving(prev => ({ ...prev, [cond.proofRequestId]: false }));
                         }
                       }}
-                      startIcon={removing[cond.proofRequestId] && <CircularProgress size={18} />}
+                      startIcon={removing[cond.proofRequestId] ? <CircularProgress size={16} /> : <DeleteOutlineRoundedIcon fontSize="small" />}
                       disabled={removing[cond.proofRequestId]}
                     >
                       {removing[cond.proofRequestId] ? 'Removing...' : 'Remove'}
@@ -636,6 +714,13 @@ const TokenList = forwardRef((props, ref) => {
                         </Typography>
                       )}
                     </Box>
+                    </Paper>
+                    <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                      <SendRoundedIcon color="primary" fontSize="small" />
+                      <Typography variant="h4">Transfer token</Typography>
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary" mb={2}>Enter the destination wallet and amount. Proof requirements are checked before execution.</Typography>
                     <Stack spacing={1.5} sx={{ mb: 1 }}>
                       <TextField
                         label="Recipient Address"
@@ -654,9 +739,19 @@ const TokenList = forwardRef((props, ref) => {
                         fullWidth
                       />
                     </Stack>
-                  </Box>
+                    </Paper>
+                  </Stack>
                   {/* Right column: proof statuses */}
-                  <Box sx={{ flex: 1, minWidth: 0, maxWidth: '100%', overflowY: 'auto', pl: 4, display: 'flex', flexDirection: 'column' }}>
+                  <Stack spacing={2} sx={{ minWidth: 0 }}>
+                    <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                      <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                        <VerifiedUserRoundedIcon color="primary" fontSize="small" />
+                        <Typography variant="h4">Proof readiness</Typography>
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary" lineHeight={1.6}>
+                        Proof status is evaluated when you initiate the transfer. If a credential is required, a secure wallet link will appear here.
+                      </Typography>
+                    </Paper>
                     {errors[selectedTokenId] && (
                       <Alert severity="error" sx={{ mb: 2 }}>
                         {errors[selectedTokenId]}
@@ -668,7 +763,7 @@ const TokenList = forwardRef((props, ref) => {
                       </Alert>
                     )}
                     {proofStatuses[selectedTokenId] && (
-                      <Accordion defaultExpanded sx={{ mt: 0, mb: 2 }}>
+                      <Accordion defaultExpanded disableGutters sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px !important', '&:before': { display: 'none' } }}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                           <Typography variant="subtitle2">Spending condition status</Typography>
                         </AccordionSummary>
@@ -714,14 +809,12 @@ const TokenList = forwardRef((props, ref) => {
                                     Condition: {proverRole} {cond.attribute} {opLabel} {cond.value}
                                   </Typography>
                                 )}
-                                <Typography variant="caption" display="block" sx={{ color: ps.isVerified ? 'success.main' : 'error.main', fontWeight: 600 }}>
-                                  Verified: {ps.isVerified ? 'Yes' : 'No'}
-                                </Typography>
+                                <Chip size="small" sx={{ mt: 1 }} color={ps.isVerified ? 'success' : 'warning'} label={ps.isVerified ? 'Proof verified' : 'Proof required'} />
                                 {!ps.isVerified && ps.url && (
                                   <Typography variant="caption" display="block">
                                     URL:{' '}
-                                    <Link href={ps.url} target="_blank" rel="noopener noreferrer">
-                                      {ps.url}
+                                    <Link href={ps.url} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: .5, fontWeight: 700 }}>
+                                      Open proof request <OpenInNewRoundedIcon sx={{ fontSize: 14 }} />
                                     </Link>
                                   </Typography>
                                 )}
@@ -731,9 +824,9 @@ const TokenList = forwardRef((props, ref) => {
                         </AccordionDetails>
                       </Accordion>
                     )}
-                  </Box>
+                  </Stack>
                 </CardContent>
-                <CardActions sx={{ p: 3 }}>
+                <Box sx={{ p: { xs: 2, sm: 3 }, pt: 0, mt: 'auto' }}>
                   <Button
                     variant="contained"
                     color="primary"
@@ -744,16 +837,16 @@ const TokenList = forwardRef((props, ref) => {
                       !recipients[selectedTokenId] ||
                       !amounts[selectedTokenId]
                     }
-                    startIcon={transferring[selectedTokenId] && <CircularProgress size={18} />}
+                    startIcon={transferring[selectedTokenId] ? <CircularProgress size={18} color="inherit" /> : <SendRoundedIcon />}
+                    sx={{ minHeight: 50 }}
                   >
-                    {transferring[selectedTokenId] ? 'Transferring...' : 'Transfer'}
+                    {transferring[selectedTokenId] ? 'Verifying & transferring…' : 'Review & transfer'}
                   </Button>
-                </CardActions>
-              </Card>
+                </Box>
+              </Box>
             )}
           </Box>
-        </Grow>
-      </Modal>
+      </Drawer>
     </>
   );
 });
