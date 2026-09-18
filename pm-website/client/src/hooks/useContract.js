@@ -31,7 +31,7 @@ export function useContract() {
         setSignerVerifierContract(null);
         return;
       }
-      const signer = await provider.getSigner();
+      const signer = await provider.getSigner(account);
       setSignerContract(new ethers.Contract(CONTRACT_ADDRESS, ABI, signer));
       setSignerVerifierContract(new ethers.Contract(VERIFIER_CONTRACT_ADDRESS, VERIFIER_ABI, signer));
     }

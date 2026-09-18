@@ -19,7 +19,7 @@ import {
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
-import { useMetaMask } from './hooks/useMetaMask';
+import { MetaMaskProvider, useMetaMask } from './hooks/useMetaMask';
 import Navigation from './components/Navigation';
 import TokenList from './components/TokenList';
 import MintTokenPage from './pages/MintTokenPage';
@@ -113,13 +113,15 @@ function WalletControl({ account, connect }) {
   return (
     <Stack direction="row" spacing={1.2} alignItems="center">
       <Chip size="small" label="Connected" color="success" variant="outlined" sx={{ display: { xs: 'none', sm: 'flex' }, bgcolor: alpha(theme.palette.success.main, 0.05) }} />
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: '6px 10px 6px 6px', border: '1px solid', borderColor: 'divider', borderRadius: 2.5, bgcolor: 'background.paper' }}>
-        <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 13, fontWeight: 800 }}>{address.slice(2, 4).toUpperCase()}</Avatar>
-        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-          <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.1}>MetaMask</Typography>
-          <Typography variant="body2" fontWeight={700} lineHeight={1.3}>{shortAddress}</Typography>
+      <Tooltip title={connectError || 'Change MetaMask account'}>
+        <Box component="button" type="button" aria-label="Change MetaMask account" onClick={handleConnect} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: '6px 10px 6px 6px', border: '1px solid', borderColor: 'divider', borderRadius: 2.5, bgcolor: 'background.paper', color: 'text.primary', font: 'inherit', cursor: 'pointer' }}>
+          <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 13, fontWeight: 800 }}>{address.slice(2, 4).toUpperCase()}</Avatar>
+          <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
+            <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.1}>MetaMask</Typography>
+            <Typography variant="body2" fontWeight={700} lineHeight={1.3}>{shortAddress}</Typography>
+          </Box>
         </Box>
-      </Box>
+      </Tooltip>
     </Stack>
   );
 }
@@ -191,7 +193,7 @@ function AppContent() {
 }
 
 function App() {
-  return <ThemeProvider theme={theme}><CssBaseline /><Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AppContent /></Router></ThemeProvider>;
+  return <ThemeProvider theme={theme}><CssBaseline /><MetaMaskProvider><Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><AppContent /></Router></MetaMaskProvider></ThemeProvider>;
 }
 
 export default App;
