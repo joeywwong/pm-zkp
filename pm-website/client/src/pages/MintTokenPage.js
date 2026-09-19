@@ -15,6 +15,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import AddCircleRoundedIcon from '@mui/icons-material/AddCircleRounded';
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
@@ -136,7 +137,7 @@ export default function MintTokenPage({ tokenListRef }) {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.45fr) minmax(280px, .7fr)' }, gap: 2.5, alignItems: 'start' }}>
         <Paper sx={{ p: { xs: 2.5, sm: 4 }, border: '1px solid', borderColor: 'divider', borderRadius: 4 }}>
           <Stack direction="row" spacing={1.5} alignItems="center" mb={3.5}>
-            <Box sx={{ width: 48, height: 48, borderRadius: 3, display: 'grid', placeItems: 'center', bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main' }}><AddCircleRoundedIcon /></Box>
+            <Box sx={theme => ({ width: 48, height: 48, borderRadius: 3, display: 'grid', placeItems: 'center', bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.09), color: 'primary.main' })}><AddCircleRoundedIcon /></Box>
             <Box>
               <Typography variant="h3">Token issuance</Typography>
               <Typography variant="body2" color="text.secondary">Create a new token type or issue more of an existing one.</Typography>

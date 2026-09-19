@@ -24,6 +24,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import RuleRoundedIcon from '@mui/icons-material/RuleRounded';
 import SchemaRoundedIcon from '@mui/icons-material/SchemaRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
@@ -43,7 +44,7 @@ const operators = [
 function SectionHeading({ icon: Icon, step, title, description }) {
   return (
     <Stack direction="row" spacing={1.5} alignItems="flex-start" mb={2.5}>
-      <Box sx={{ width: 42, height: 42, flexShrink: 0, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main' }}><Icon fontSize="small" /></Box>
+      <Box sx={theme => ({ width: 42, height: 42, flexShrink: 0, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.09), color: 'primary.main' })}><Icon fontSize="small" /></Box>
       <Box>
         <Stack direction="row" spacing={1} alignItems="center"><Typography variant="h4">{title}</Typography><Chip size="small" label={`Step ${step}`} variant="outlined" /></Stack>
         <Typography variant="body2" color="text.secondary" mt={.4}>{description}</Typography>

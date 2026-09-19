@@ -26,6 +26,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
@@ -363,7 +364,7 @@ const TokenList = forwardRef((props, ref) => {
     return (
       <Paper sx={{ minHeight: 420, display: 'grid', placeItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 4, px: 3 }}>
         <Stack alignItems="center" spacing={2} sx={{ maxWidth: 440, textAlign: 'center' }}>
-          <Box sx={{ width: 64, height: 64, borderRadius: 3, display: 'grid', placeItems: 'center', bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main' }}>
+          <Box sx={theme => ({ width: 64, height: 64, borderRadius: 3, display: 'grid', placeItems: 'center', bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.09), color: 'primary.main' })}>
             <AccountBalanceWalletRoundedIcon sx={{ fontSize: 32 }} />
           </Box>
           <Box>
@@ -428,12 +429,12 @@ const TokenList = forwardRef((props, ref) => {
             <Typography variant="body2" sx={{ opacity: .74, mt: 1 }}>Across every programmable token held by this wallet</Typography>
           </Paper>
           <Paper sx={{ p: 2.5, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: 'rgba(24,169,153,.1)', color: 'secondary.main', display: 'grid', placeItems: 'center', mb: 2 }}><TokenRoundedIcon /></Box>
+            <Box sx={theme => ({ width: 42, height: 42, borderRadius: 2.5, bgcolor: alpha(theme.palette.secondary.main, theme.palette.mode === 'dark' ? 0.16 : 0.1), color: 'secondary.main', display: 'grid', placeItems: 'center', mb: 2 })}><TokenRoundedIcon /></Box>
             <Typography variant="h2">{tokenIds.length}</Typography>
             <Typography color="text.secondary" variant="body2">Token types</Typography>
           </Paper>
           <Paper sx={{ p: 2.5, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ width: 42, height: 42, borderRadius: 2.5, bgcolor: 'rgba(91,79,233,.09)', color: 'primary.main', display: 'grid', placeItems: 'center', mb: 2 }}><VerifiedUserRoundedIcon /></Box>
+            <Box sx={theme => ({ width: 42, height: 42, borderRadius: 2.5, bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.09), color: 'primary.main', display: 'grid', placeItems: 'center', mb: 2 })}><VerifiedUserRoundedIcon /></Box>
             <Typography variant="h2">{conditionCount}</Typography>
             <Typography color="text.secondary" variant="body2">Active conditions</Typography>
           </Paper>
@@ -460,16 +461,16 @@ const TokenList = forwardRef((props, ref) => {
               key={id}
               component="button"
               onClick={() => setSelectedTokenId(id)}
-              sx={{
+              sx={theme => ({
                 width: '100%', minHeight: 190, p: 0, textAlign: 'left', cursor: 'pointer', bgcolor: 'background.paper',
                 transition: 'transform .2s ease, box-shadow .2s ease, border-color .2s ease',
-                '&:hover': { transform: 'translateY(-3px)', borderColor: 'rgba(91,79,233,.32)', boxShadow: '0 18px 44px rgba(30,39,65,.11)' },
-                '&:focus-visible': { outline: '3px solid rgba(91,79,233,.28)', outlineOffset: 2 },
-              }}
+                '&:hover': { transform: 'translateY(-3px)', borderColor: alpha(theme.palette.primary.main, 0.38), boxShadow: theme.palette.mode === 'dark' ? '0 18px 44px rgba(0,0,0,.3)' : '0 18px 44px rgba(30,39,65,.11)' },
+                '&:focus-visible': { outline: `3px solid ${alpha(theme.palette.primary.main, 0.3)}`, outlineOffset: 2 },
+              })}
             >
                 <CardContent sx={{ width: '100%', p: 2.5, '&:last-child': { pb: 2.5 } }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Box sx={{ width: 46, height: 46, borderRadius: 2.5, display: 'grid', placeItems: 'center', color: 'primary.main', bgcolor: 'rgba(91,79,233,.09)' }}>
+                    <Box sx={theme => ({ width: 46, height: 46, borderRadius: 2.5, display: 'grid', placeItems: 'center', color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.15 : 0.09) })}>
                       <TokenRoundedIcon />
                     </Box>
                     <Chip size="small" label={`#${id}`} sx={{ fontFamily: 'monospace' }} />

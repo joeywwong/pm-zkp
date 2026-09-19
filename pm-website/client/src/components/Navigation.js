@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Button, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import AddCircleRoundedIcon from '@mui/icons-material/AddCircleRounded';
 import RuleRoundedIcon from '@mui/icons-material/RuleRounded';
@@ -25,14 +26,14 @@ export default function Navigation({ onNavigate }) {
             onClick={() => { navigate(path); onNavigate?.(); }}
             aria-current={active ? 'page' : undefined}
             startIcon={<Icon />}
-            sx={{
+            sx={theme => ({
               justifyContent: 'flex-start', alignItems: 'center', textAlign: 'left', px: 1.5, py: 1.15,
               minHeight: 58, color: active ? 'primary.main' : 'text.primary',
-              bgcolor: active ? 'rgba(91,79,233,.09)' : 'transparent', border: '1px solid',
-              borderColor: active ? 'rgba(91,79,233,.13)' : 'transparent',
-              '&:hover': { bgcolor: active ? 'rgba(91,79,233,.13)' : 'rgba(24,33,53,.04)' },
+              bgcolor: active ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.14 : 0.09) : 'transparent', border: '1px solid',
+              borderColor: active ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.22 : 0.13) : 'transparent',
+              '&:hover': { bgcolor: active ? alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.2 : 0.13) : theme.palette.action.hover },
               '& .MuiButton-startIcon': { mr: 1.4 },
-            }}
+            })}
           >
             <Box>
               <Typography variant="body2" fontWeight={750} lineHeight={1.25}>{label}</Typography>

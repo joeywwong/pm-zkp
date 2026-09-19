@@ -1,5 +1,6 @@
 * { box-sizing: border-box; }
-html { min-width: 320px; background: #F5F7FB; }
+html { min-width: 320px; background: #F5F7FB; color-scheme: light; }
+html[data-theme='dark'] { background: #0E1220; color-scheme: dark; }
 body { margin: 0; min-width: 320px; min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 button, input, textarea, select { font: inherit; }
 a { color: inherit; }
