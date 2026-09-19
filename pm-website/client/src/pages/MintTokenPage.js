@@ -200,9 +200,21 @@ export default function MintTokenPage({ tokenListRef }) {
           </Stack>
         </Paper>
 
-        <Paper sx={{ p: 3, borderRadius: 4, color: 'white', background: 'linear-gradient(150deg, #1F1B55 0%, #4238B5 100%)', position: 'relative', overflow: 'hidden' }}>
-          <Box sx={{ position: 'absolute', width: 170, height: 170, borderRadius: '50%', bgcolor: 'rgba(255,255,255,.06)', right: -55, top: -55 }} />
-          <AutoAwesomeRoundedIcon sx={{ mb: 4, opacity: .85 }} />
+        <Paper sx={theme => ({
+          p: 3,
+          borderRadius: 4,
+          color: theme.palette.mode === 'dark' ? '#FFFFFF' : '#29245C',
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(150deg, #1F1B55 0%, #4238B5 100%)'
+            : 'linear-gradient(150deg, #F4F2FF 0%, #DDD9FF 100%)',
+          border: '1px solid',
+          borderColor: theme.palette.mode === 'dark' ? 'transparent' : alpha(theme.palette.primary.main, 0.16),
+          boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 18px 46px rgba(67, 56, 202, 0.10)',
+          position: 'relative',
+          overflow: 'hidden',
+        })}>
+          <Box sx={theme => ({ position: 'absolute', width: 170, height: 170, borderRadius: '50%', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,.06)' : alpha(theme.palette.primary.main, 0.09), right: -55, top: -55 })} />
+          <AutoAwesomeRoundedIcon sx={theme => ({ mb: 4, opacity: .85, color: theme.palette.mode === 'dark' ? 'inherit' : 'primary.main' })} />
           <Typography variant="h3" color="inherit">Issuance preview</Typography>
           <Typography sx={{ opacity: .7, mt: .7, mb: 3 }} variant="body2">Review the essential details before requesting a wallet signature.</Typography>
           <Stack spacing={2}>
@@ -210,7 +222,7 @@ export default function MintTokenPage({ tokenListRef }) {
             <Box><Typography variant="caption" sx={{ opacity: .65 }}>Amount</Typography><Typography fontWeight={750}>{mintAmount || '—'} units</Typography></Box>
             <Box><Typography variant="caption" sx={{ opacity: .65 }}>Recipient</Typography><Typography fontFamily="monospace" variant="body2" sx={{ overflowWrap: 'anywhere' }}>{mintRecipient || 'No wallet entered'}</Typography></Box>
           </Stack>
-          <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,.14)' }} />
+          <Divider sx={theme => ({ my: 3, borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,.14)' : alpha(theme.palette.primary.dark, 0.16) })} />
           <Typography variant="caption" sx={{ opacity: .7 }}>Testing environment</Typography>
           <Typography variant="body2" mt={.5} lineHeight={1.55}>Anyone can mint in this thesis deployment. Production permissions can be restricted by contract roles.</Typography>
         </Paper>
