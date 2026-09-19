@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
 
 export default function ReadJsonLD({ url, setUrl, onData }) {
   const [loading, setLoading] = useState(false);
@@ -63,8 +67,7 @@ export default function ReadJsonLD({ url, setUrl, onData }) {
   }, [url]);
 
   return (
-    <div className="mb-4">
-      <label className="block mb-1 font-medium">Enter credentials schema URL (JSON‑LD):</label>
+    <Box>
       <Autocomplete
         freeSolo
         options={jsonLdOptions}
@@ -95,15 +98,15 @@ export default function ReadJsonLD({ url, setUrl, onData }) {
             <Box sx={{ position: 'relative', width: '100%' }}>
               <TextField
                 {...params}
-                label="JSON-LD URL"
+                label="Credential context URL"
                 fullWidth
-                margin="normal"
                 InputProps={{
                   ...params.InputProps,
-                  startAdornment: null,
-                  endAdornment: showClear ? params.InputProps.endAdornment : null,
+                  startAdornment: <LinkRoundedIcon fontSize="small" color="action" sx={{ mr: 1 }} />,
+                  endAdornment: loading ? <CircularProgress size={20} /> : (showClear ? params.InputProps.endAdornment : null),
                 }}
-                placeholder="Select from list or enter the URL"
+                placeholder="Select the sample context or enter a public JSON-LD URL"
+                helperText="The context must remain publicly accessible so proof requests can resolve its schema."
               />
               {showTriangle && (
                 <Box sx={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 2 }}>
@@ -116,13 +119,8 @@ export default function ReadJsonLD({ url, setUrl, onData }) {
           );
         }}
       />
-      {loading && (
-        <div className="mt-2 flex items-center">
-          <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-          <span className="ml-2">Loading JSON…</span>
-        </div>
-      )}
-      {error && <p className="text-red-500 mt-2">Error: {error}</p>}
-    </div>
+      {loading && <Typography variant="caption" color="text.secondary" display="block" mt={1}>Loading credential context…</Typography>}
+      {error && <Alert severity="error" sx={{ mt: 1.5 }}>Could not load this credential context: {error}</Alert>}
+    </Box>
   );
 }
