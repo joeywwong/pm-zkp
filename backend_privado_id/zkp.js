@@ -15,7 +15,7 @@ dotenv_1.default.config();
 const rhsUrl = process.env.RHS_URL;
 const walletKey = process.env.WALLET_KEY;
 const defaultNetworkConnection = {
-    rpcUrl: process.env.RPC_URL,
+    rpcUrl: process.env.RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com",
     contractAddress: process.env.CONTRACT_ADDRESS,
     chainId: parseInt(process.env.CHAIN_ID)
 };

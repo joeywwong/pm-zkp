@@ -167,7 +167,8 @@ function getParamsFromChainId(chainId: number) {
 
   switch (chainId) {
     case 80002:
-      rpcUrl = process.env.POLYGON_AMOY_RPC_URL as string;
+      rpcUrl =
+        process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com";
       method = DidMethod.Iden3;
       blockchain = Blockchain.Polygon;
       networkId = NetworkId.Amoy;

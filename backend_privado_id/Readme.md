@@ -31,8 +31,8 @@
     CONTRACT_ADDRESS="0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"
     # path to the circuits folder
     CIRCUITS_PATH="./circuits" 
-    # url to polygon amoy network rpc node
-    RPC_URL="" 
+    # URL to a Polygon Amoy RPC node
+    RPC_URL="https://polygon-amoy-bor-rpc.publicnode.com"
     # key in hex format with matic balance
     WALLET_KEY="" 
     # MongoDB connection string, uses in memory Mongo server if not specified

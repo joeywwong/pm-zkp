@@ -67,9 +67,8 @@ const config: HardhatUserConfig = {
     },
     "polygon-amoy": {
       chainId: 80002,
-      //url: `${process.env.POLYGON_AMOY_RPC_URL}`,
       //accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : DEFAULT_ACCOUNTS,
-      url: `https://polygon-amoy-bor-rpc.publicnode.com`,
+      url: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com",
       //ledgerAccounts: [`${process.env.LEDGER_ACCOUNT}`],
       //accounts: process.env.PRIVATE_KEY ? [`0x${process.env.PRIVATE_KEY}`] : DEFAULT_ACCOUNTS
       //This is a test account, do not use in production

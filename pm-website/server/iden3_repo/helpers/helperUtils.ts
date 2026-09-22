@@ -144,7 +144,11 @@ export function getProviders() {
   return [
     { network: networks.PRIVADO_TEST.name, rpcUrl: process.env.PRIVADO_TEST_RPC_URL as string },
     { network: networks.PRIVADO_MAIN.name, rpcUrl: process.env.PRIVADO_MAIN_RPC_URL as string },
-    { network: networks.POLYGON_AMOY.name, rpcUrl: process.env.POLYGON_AMOY_RPC_URL as string },
+    {
+      network: networks.POLYGON_AMOY.name,
+      rpcUrl:
+        process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com",
+    },
     {
       network: networks.POLYGON_MAINNET.name,
       rpcUrl: process.env.POLYGON_MAINNET_RPC_URL as string,

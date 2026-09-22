@@ -34,7 +34,7 @@ const rhsUrl = process.env.RHS_URL as string;
 const walletKey = process.env.WALLET_KEY as string;
 
 const defaultNetworkConnection = {
-  rpcUrl: process.env.RPC_URL as string,
+  rpcUrl: process.env.RPC_URL || "https://polygon-amoy-bor-rpc.publicnode.com",
   contractAddress: process.env.CONTRACT_ADDRESS as string,
   chainId: parseInt(process.env.CHAIN_ID as string)
 };
