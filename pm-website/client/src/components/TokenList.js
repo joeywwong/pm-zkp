@@ -56,9 +56,40 @@ const TokenList = forwardRef((props, ref) => {
   const [tokenNames, setTokenNames] = useState({});
   const [spendingConditions, setSpendingConditions] = useState({});
 
+  const readSpendingConditions = async (tokenId) => {
+    if (!signerContract || !account) {
+      throw new Error('Connect the wallet before loading spending conditions.');
+    }
+
+    // This view is access-controlled by msg.sender, so it must use the
+    // wallet-backed contract even though it does not create a transaction.
+    const [scIds, scArr] = await signerContract.getSpendingConditions(tokenId, account);
+
+    return Promise.all(scIds.map(async (scId, idx) => {
+      const condition = scArr[idx];
+      let role = '';
+
+      // Some deployed PMNoAdmin versions keep the role mapping private and do
+      // not expose this getter. A missing role must not hide the condition.
+      try {
+        role = await signerContract.tokenID_requestSetter_proofRequest_role(tokenId, account, scId);
+      } catch (err) {
+        console.warn('Spending-condition role is unavailable on the deployed contract:', err);
+      }
+
+      return {
+        proofRequestId: scId,
+        attribute: condition.attribute || condition[0] || '',
+        operatorStr: condition.operatorStr || condition[1] || '',
+        value: condition.value || condition[2] || '',
+        role,
+      };
+    }));
+  };
+
   // Expose refreshTokens via ref
   async function loadTokens() {
-    if (!staticContract || !account) return;
+    if (!staticContract || !signerContract || !account) return;
     setProofStatuses({});
     setErrors({});
     setLoading(true);
@@ -85,29 +116,9 @@ const TokenList = forwardRef((props, ref) => {
       const scs = {};
       for (const id of ids) {
         try {
-          const [scIds, scArr] = await staticContract.getSpendingConditions(id, account);
-          // Fetch roles for each spending condition
-          const roles = [];
-          for (let i = 0; i < scIds.length; i++) {
-            const role = await staticContract.tokenID_requestSetter_proofRequest_role(id, account, scIds[i]);
-            roles.push(role);
-          }
-          scs[id] = scIds.map((scId, idx) => {
-            const cond = scArr[idx];
-            // Support both named and indexed struct return
-            const attribute = cond.attribute || cond[0] || '';
-            const operatorStr = cond.operatorStr || cond[1] || '';
-            const value = cond.value || cond[2] || '';
-            const role = roles[idx] || '';
-            return {
-              proofRequestId: scId,
-              attribute,
-              operatorStr,
-              value,
-              role
-            };
-          });
-        } catch {
+          scs[id] = await readSpendingConditions(id);
+        } catch (err) {
+          console.error(`Failed to load spending conditions for token ${id}:`, err);
           scs[id] = [];
         }
       }
@@ -122,31 +133,13 @@ const TokenList = forwardRef((props, ref) => {
   // Expose refreshTokens and per-token refresh methods to parent component
   // This allows parent components to trigger a refresh of the token list or individual tokens
   const refreshTokenSpendingConditions = async (tokenId) => {
-    if (!staticContract || !account) return;
+    if (!signerContract || !account) return;
     try {
-      const [scIds, scArr] = await staticContract.getSpendingConditions(tokenId, account);
-      // Fetch roles for each spending condition
-      const roles = [];
-      for (let i = 0; i < scIds.length; i++) {
-        const role = await staticContract.tokenID_requestSetter_proofRequest_role(tokenId, account, scIds[i]);
-        roles.push(role);
-      }
-      const updated = scIds.map((scId, idx) => {
-        const c = scArr[idx];
-        const attribute = c.attribute || c[0] || '';
-        const operatorStr = c.operatorStr || c[1] || '';
-        const value = c.value || c[2] || '';
-        const role = roles[idx] || '';
-        return {
-          proofRequestId: scId,
-          attribute,
-          operatorStr,
-          value,
-          role
-        };
-      });
+      const updated = await readSpendingConditions(tokenId);
       setSpendingConditions(prev => ({ ...prev, [tokenId]: updated }));
-    } catch {}
+    } catch (err) {
+      console.error(`Failed to refresh spending conditions for token ${tokenId}:`, err);
+    }
   };
 
   const refreshTokenBalance = async (tokenId) => {
@@ -173,30 +166,12 @@ const TokenList = forwardRef((props, ref) => {
         name = await staticContract.tokenName(tokenId);
       } catch {}
       // Fetch spending conditions
-      let scArr = [];
+      let conditions = [];
       try {
-        const [scIds, scStructArr] = await staticContract.getSpendingConditions(tokenId);
-        // Fetch roles for each spending condition
-        const roles = [];
-        for (let i = 0; i < scIds.length; i++) {
-          const role = await staticContract.tokenID_requestSetter_proofRequest_role(tokenId, account, scIds[i]);
-          roles.push(role);
-        }
-        scArr = scIds.map((scId, idx) => {
-          const c = scStructArr[idx];
-          const attribute = c.attribute || c[0] || '';
-          const operatorStr = c.operatorStr || c[1] || '';
-          const value = c.value || c[2] || '';
-          const role = roles[idx] || '';
-          return {
-            proofRequestId: scId,
-            attribute,
-            operatorStr,
-            value,
-            role
-          };
-        });
-      } catch {}
+        conditions = await readSpendingConditions(tokenId);
+      } catch (err) {
+        console.error(`Failed to load spending conditions for new token ${tokenId}:`, err);
+      }
       // Append to state arrays
       setTokenIds(prev => prev.includes(tokenId) ? prev : [...prev, tokenId]);
       setBalances(prev => {
@@ -204,7 +179,7 @@ const TokenList = forwardRef((props, ref) => {
         return [...prev, bal.toString()];
       });
       setTokenNames(prev => ({ ...prev, [tokenId]: name }));
-      setSpendingConditions(prev => ({ ...prev, [tokenId]: scArr }));
+      setSpendingConditions(prev => ({ ...prev, [tokenId]: conditions }));
     } catch {}
   };
 
@@ -220,7 +195,7 @@ const TokenList = forwardRef((props, ref) => {
     loadTokens();
     // Contract/account changes are the refresh boundary for the dashboard.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staticContract, account]);
+  }, [staticContract, signerContract, account]);
 
   const handleRecipientChange = (id, value) => {
     setRecipients(prev => ({ ...prev, [id]: value }));
@@ -242,14 +217,20 @@ const TokenList = forwardRef((props, ref) => {
     let proofNotVerified = false;
     try {
       // --- Fetch only current user's spending conditions ---
-      const [scIds] = await staticContract.getSpendingConditions(id, account);
-      const proofPairs = [];
-      for (let i = 0; i < scIds.length; i++) {
-        const role = await staticContract.tokenID_requestSetter_proofRequest_role(id, account, scIds[i]);
-        if (role === 'sender' || role === 'receiver') {
-          proofPairs.push({ requestId: scIds[i].toString(), role });
-        }
+      const conditions = await readSpendingConditions(id);
+      setSpendingConditions(prev => ({ ...prev, [id]: conditions }));
+
+      if (conditions.some(condition => condition.role !== 'sender' && condition.role !== 'receiver')) {
+        setErrors(prev => ({
+          ...prev,
+          [id]: 'The deployed contract does not expose the prover role for this spending condition. Redeploy PMNoAdmin with a role getter before transferring this token.',
+        }));
+        return;
       }
+      const proofPairs = conditions.map(condition => ({
+        requestId: condition.proofRequestId.toString(),
+        role: condition.role,
+      }));
 
       // --- Call getProofStatus, getZKPRequest, and fetch URL for failures ---
       const statuses = proofPairs.map(pair => ({ ...pair, isVerified: false, zkpRequest: null, url: null }));
@@ -670,28 +651,11 @@ const TokenList = forwardRef((props, ref) => {
                           }
                           // Refresh spending conditions for this token
                           try {
-                            const [scIds, scArr] = await staticContract.getSpendingConditions(selectedTokenId, account);
-                            const roles = [];
-                            for (let i = 0; i < scIds.length; i++) {
-                              const role = await staticContract.tokenID_requestSetter_proofRequest_role(selectedTokenId, account, scIds[i]);
-                              roles.push(role);
-                            }
-                            const updated = scIds.map((scId, idx) => {
-                              const c = scArr[idx];
-                              const attribute = c.attribute || c[0] || '';
-                              const operatorStr = c.operatorStr || c[1] || '';
-                              const value = c.value || c[2] || '';
-                              const role = roles[idx] || '';
-                              return {
-                                proofRequestId: scId,
-                                attribute,
-                                operatorStr,
-                                value,
-                                role
-                              };
-                            });
+                            const updated = await readSpendingConditions(selectedTokenId);
                             setSpendingConditions(prev => ({ ...prev, [selectedTokenId]: updated }));
-                          } catch {}
+                          } catch (err) {
+                            console.error(`Failed to refresh spending conditions for token ${selectedTokenId}:`, err);
+                          }
                         } catch (err) {
                           alert('Failed to remove spending condition: ' + (err.reason || err.message));
                         } finally {
