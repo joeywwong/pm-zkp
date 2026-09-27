@@ -1,4 +1,4 @@
-import contractJson from './PMNoAdmin_compData.json';
+import contractJson from './PMNoAdmin_abi.json';
 import verifierContract from './UniversalVerifier_compData';
 
 // This address is the deployed PM contract where only contract owner can mint token, 
@@ -13,8 +13,8 @@ import verifierContract from './UniversalVerifier_compData';
 // and anyone can mint token,
 //export const CONTRACT_ADDRESS = '0xe09104EAaD696Bf8a4b9534A30C78DF15E42403c';
 
-//29th Aug
-export const CONTRACT_ADDRESS = '0x0c0a0fd6000b3e7b437bc59f7843e5a6a9a31230';
+// Corrected PMNoAdmin deployment with access-controlled prover-role getter.
+export const CONTRACT_ADDRESS = '0xe4eFd9f152b249d09C191c6a694055094675B8DD';
 
 export const ABI = contractJson.abi;
 export const VERIFIER_CONTRACT_ADDRESS = '0xfcc86A79fCb057A8e55C6B853dff9479C3cf607c';
