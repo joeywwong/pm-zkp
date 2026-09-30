@@ -549,10 +549,8 @@ const TokenList = forwardRef((props, ref) => {
                 </Box>
                 <CardContent
                   sx={{
-                    flexGrow: 1,
                     display: 'grid',
                     gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(280px, .9fr)' },
-                    minHeight: 0,
                     p: { xs: 2, sm: 3 },
                     gap: 2.5,
                     alignItems: 'start',
@@ -722,7 +720,7 @@ const TokenList = forwardRef((props, ref) => {
                       <Typography variant="h4">Transfer token</Typography>
                     </Stack>
                     <Typography variant="body2" color="text.secondary" mb={2}>Enter the destination wallet and amount. Proof requirements are checked before execution.</Typography>
-                    <Stack spacing={1.5} sx={{ mb: 1 }}>
+                    <Stack spacing={1.5} sx={{ mb: 2 }}>
                       <TextField
                         label="Recipient Address"
                         value={recipients[selectedTokenId] || ''}
@@ -740,6 +738,21 @@ const TokenList = forwardRef((props, ref) => {
                         fullWidth
                       />
                     </Stack>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      onClick={e => { e.stopPropagation(); handleTransfer(selectedTokenId); }}
+                      disabled={
+                        transferring[selectedTokenId] ||
+                        !recipients[selectedTokenId] ||
+                        !amounts[selectedTokenId]
+                      }
+                      startIcon={transferring[selectedTokenId] ? <CircularProgress size={18} color="inherit" /> : <SendRoundedIcon />}
+                      sx={{ minHeight: 50 }}
+                    >
+                      {transferring[selectedTokenId] ? 'Verifying & transferring…' : 'Review & transfer'}
+                    </Button>
                     </Paper>
                   </Stack>
                   {/* Right column: proof statuses */}
@@ -827,23 +840,6 @@ const TokenList = forwardRef((props, ref) => {
                     )}
                   </Stack>
                 </CardContent>
-                <Box sx={{ p: { xs: 2, sm: 3 }, pt: 0, mt: 'auto' }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    onClick={e => { e.stopPropagation(); handleTransfer(selectedTokenId); }}
-                    disabled={
-                      transferring[selectedTokenId] ||
-                      !recipients[selectedTokenId] ||
-                      !amounts[selectedTokenId]
-                    }
-                    startIcon={transferring[selectedTokenId] ? <CircularProgress size={18} color="inherit" /> : <SendRoundedIcon />}
-                    sx={{ minHeight: 50 }}
-                  >
-                    {transferring[selectedTokenId] ? 'Verifying & transferring…' : 'Review & transfer'}
-                  </Button>
-                </Box>
               </Box>
             )}
           </Box>
